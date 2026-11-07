@@ -9,6 +9,6 @@ mountPerfOverlay();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {new URLSearchParams(location.search).get("ui") === "2" ? <Shell /> : <App />}
+    {new URLSearchParams(location.search).get("ui") === "1" ? <App /> : <Shell />}
   </StrictMode>,
 );

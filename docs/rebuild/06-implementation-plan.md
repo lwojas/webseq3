@@ -70,7 +70,7 @@ src/styles/            tokens.css (V1 tokens), kit.css, then one css per area (n
 
 ## Status (end of first implementation session)
 
-Run the new UI with `npm run dev` → `http://localhost:5174/?ui=2` (V1 remains the default). `tsc` clean, 56 test files / 835 tests green.
+The new UI is the default (`npm run dev` → `http://localhost:5174/`); V1 is at `?ui=1`. `tsc` clean, 56 test files / 835 tests green.
 
 | Step | State |
 |---|---|

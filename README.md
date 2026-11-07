@@ -17,6 +17,12 @@ before changing anything in `src/audio/` — several non-obvious fixes are alrea
 there, and undoing them re-breaks the dev server or the engine bootstrap. See "Known
 gotchas" below.
 
+## The UI
+
+The default UI is the composition-focused rebuild (step lane → step graph → piano roll → arrangement; sidebar, main menu, device area).
+Its design, the V1 feature checklist and the accessibility notes are in [`docs/rebuild/`](docs/rebuild/). The original UI is still
+available at `?ui=1` (e.g. `http://localhost:5174/?ui=1`) until it is removed. Both run on the same controller (`src/state/useController.tsx`).
+
 ## Getting started
 
 ```bash

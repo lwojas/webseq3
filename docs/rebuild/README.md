@@ -28,5 +28,8 @@ Written before any UI code, per the brief. Read in order.
 2. **Probability ("chance") is new, not V1.** It needs a small deterministic scheduling change in `compile.ts`. Include in
    this rebuild (after parity) or leave the graph tab out for now? *Default: defer, but the graph registry is ready for it.*
 3. **MIDI recording (V2's recorder)** is also not V1. *Default: out of scope for the rebuild, easy to add afterwards.*
-4. **Where to build:** new code goes in this clone (`webseq3/webseq`) under `src/ui`, `src/state`, behind `?ui=2` until parity,
+4. **Where to build:** new code goes in this clone (`webseq3/webseq`) under `src/ui`, `src/state`, behind `?ui=2` until parity (done: it is now the default; V1 is `?ui=1`),
    then V1's UI is removed. *Confirm, or say if you'd rather have a fresh branch/repo.*
+
+## Status
+Implementation complete and the checklist walked: see the end of [01-v1-audit.md](01-v1-audit.md) (133 rows, deviations, what was and was not verified) and [07-accessibility.md](07-accessibility.md). The rebuilt UI is the default; the original V1 UI remains at `?ui=1` until it is deleted.

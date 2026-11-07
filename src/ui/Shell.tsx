@@ -1,6 +1,6 @@
 // The rebuilt application shell (docs/rebuild/04-ui-rules.md §1): app bar, context bar, one of three workspaces (Pattern, Arrange,
 // Mixer), a library drawer, and the selected track's device area. It owns layout and navigation only; state and behaviour are the
-// V1 controller's (state/useController.tsx). Enabled with ?ui=2 until the parity checklist is complete.
+// V1 controller's (state/useController.tsx). The default UI; the original V1 UI is still available at ?ui=1 until it is removed.
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { ComposerTimeline } from "../components/ComposerTimeline";
 import { FxPanel } from "../components/FxPanel";
@@ -357,6 +357,9 @@ function ShellInner() {
             <button className="wx-icon-btn" onClick={() => c.handleStepTrack(1)} aria-label="Next track" title="Next track"><Icon name="chevronRight" size={14} /></button>
             <span className="wx-spacer" />
             {c.clipboardStatus && <span className="wx-status" role="status">{c.clipboardStatus}</span>}
+            {c.playingPatternId && c.playingPatternId !== selectedPatternId && (
+              <button className="wx-btn" onClick={() => c.setSelectedPatternId(c.playingPatternId as string)} title="Another pattern is playing: open it" aria-label="Go to the playing pattern"><Icon name="play" size={12} fill /> {c.launcher.find((x) => x.id === c.playingPatternId)?.name ?? "Playing"}</button>
+            )}
             <button className="wx-icon-btn" onClick={() => c.addPattern()} aria-label="New pattern" title="New pattern"><Icon name="plus" /></button>
             <button className="wx-icon-btn" onClick={() => c.duplicatePattern(selectedPatternId)} aria-label="Duplicate pattern" title="Duplicate this pattern and open the copy"><Icon name="copy" /></button>
             <button className="wx-icon-btn" onClick={() => c.handleAddToComposer(selectedPatternId)} aria-label="Add to Arrange" title="Place this pattern on the Arrangement"><Icon name="arrangeAdd" /></button>

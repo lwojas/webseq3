@@ -1,4 +1,4 @@
-/* Rebuilt shell (?ui=2). Tokens are V1's (--bg --panel --panel-alt --border --border-strong --text --text-dim --accent --amber --danger);
+/* Application shell. Tokens are V1's (--bg --panel --panel-alt --border --border-strong --text --text-dim --accent --amber --danger);
    flat regions with 1px hairlines, no cards. Classes are .wx-* so V1 is unaffected. See docs/rebuild/04-ui-rules.md. */
 
 .wx {
