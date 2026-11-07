@@ -25,8 +25,8 @@ interface Props<T extends string> {
 export function PanelHeader<T extends string>({ title, subject, tabs, tab, onTab, actions, collapsed, onToggleCollapsed, maximised, onToggleMaximised }: Props<T>) {
   return (
     <div className="wx-panel-header">
-      <button className="wx-panel-toggle" onClick={onToggleCollapsed} aria-expanded={!collapsed} aria-label={`${collapsed ? "Expand" : "Collapse"} ${title}`} disabled={!onToggleCollapsed}>
-        <Icon name={collapsed ? "chevronRight" : "chevronDown"} size={12} />
+      <button className={`wx-panel-toggle ${collapsed ? "collapsed" : ""}`} onClick={onToggleCollapsed} aria-expanded={!collapsed} aria-label={`${collapsed ? "Expand" : "Collapse"} ${title}`} disabled={!onToggleCollapsed}>
+        <Icon name="chevronDown" size={12} />
       </button>
       <span className="wx-panel-title">{title}</span>
       {subject && <span className="wx-panel-subject">· {subject}</span>}

@@ -181,9 +181,14 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
       {tab !== "roll" && tab !== "chord" && tab !== "auto" && !drawer.maximised && <Splitter axis="row" shellRef={{ current: null }} cssVar="--wx-drawer-h" value={drawer.height} min={80} max={360} direction={1} onCommit={(height) => onDrawer({ height })} label="Resize graph" />}
     </div>
   ) : selectedTrack ? (
-    <div className="wx-drawer-closed">
-      <button className="wx-drawer-open" onClick={() => onDrawer({ open: true })} title="Expand the step graph under this track (G)"><Icon name="graph" size={13} /> Graph</button>
-      <button className="wx-drawer-open" onClick={() => onDrawer({ open: true, tab: "roll" })} title="Open the piano roll for this track"><Icon name="roll" size={13} /> Roll</button>
+    // Collapsed: the same header as the expanded drawer, in the same place, with the chevron turned. Nothing jumps when it opens.
+    <div className="wx-drawer wx-drawer-closed" style={{ ["--identity" as string]: trackColor(trackIndex) } as CSSProperties}>
+      <div className="wx-panel-header">
+        <button className="wx-panel-toggle collapsed" onClick={() => onDrawer({ open: true })} aria-expanded={false} aria-label="Expand GRAPH" title="Expand the step graph under this track (G)"><Icon name="chevronDown" size={12} /></button>
+        <span className="wx-panel-title">GRAPH</span>
+        <span className="wx-panel-subject">· {String(trackIndex + 1).padStart(2, "0")} {selectedTrack.name}</span>
+        <button className="wx-drawer-open" onClick={() => onDrawer({ open: true, tab: "roll" })} title="Open the piano roll for this track"><Icon name="roll" size={13} /> Roll</button>
+      </div>
     </div>
   ) : null;
 

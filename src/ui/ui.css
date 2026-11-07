@@ -211,8 +211,10 @@
 .wx-drawer.maximised { position: sticky; left: 0; }
 .wx-drawer-body { position: relative; }
 .wx-drawer-body.roll { display: flex; flex-direction: column; min-width: 0; position: sticky; left: 0; width: calc(100vw - var(--wx-library-w) - 2px); max-width: 100%; }
-.wx-drawer-closed { display: flex; gap: 6px; padding: 2px 6px 2px calc(var(--wx-head-w) + 8px); background: var(--bg); border-bottom: 1px solid var(--wx-hairline); position: sticky; left: 0; }
-.wx-drawer-open { background: transparent; border: 0; color: var(--text-dim); cursor: pointer; padding: 0 6px; height: 18px; }
+.wx-drawer-closed { border-bottom: 1px solid var(--wx-hairline); background: var(--bg); }
+.wx-drawer-closed .wx-panel-header { background: var(--bg); }
+.wx-panel-toggle.collapsed svg { transform: rotate(-90deg); }
+.wx-drawer-open { background: transparent; border: 0; color: var(--text-dim); cursor: pointer; padding: 0 6px; height: 20px; margin-left: 6px; }
 .wx-drawer-open:hover { color: var(--accent); }
 .wx-graph { position: relative; padding-left: var(--wx-head-w); }
 .wx-graph-body { overflow: visible; }
