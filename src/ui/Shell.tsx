@@ -1,7 +1,7 @@
 // The rebuilt application shell (docs/rebuild/04-ui-rules.md §1): app bar, context bar, one of three workspaces (Pattern, Arrange,
 // Mixer), a library drawer, and the selected track's device area. It owns layout and navigation only; state and behaviour are the
 // V1 controller's (state/useController.tsx). Enabled with ?ui=2 until the parity checklist is complete.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type MutableRefObject } from "react";
 import { ComposerTimeline } from "../components/ComposerTimeline";
 import { FxPanel } from "../components/FxPanel";
 import { InstrumentPanel } from "../components/InstrumentPanel";
@@ -19,7 +19,8 @@ import { Popover } from "./kit/Popover";
 import { MainMenu, type MenuSection } from "./MainMenu";
 import { Sidebar, type SidebarSection } from "./Sidebar";
 import { Transport } from "./Transport";
-import { PanelHeader } from "./kit/PanelHeader";
+import { PanelHeader, tabPanelProps } from "./kit/PanelHeader";
+import { AnnouncerProvider, tabKeyDown, useAnnounce, useFocusTrap } from "./kit/a11y";
 import { Splitter } from "./kit/Splitter";
 import { DEFAULT_DRAWER, PatternWorkspace, type DrawerState } from "./pattern/PatternWorkspace";
 import type { StepSelection } from "./pattern/StepLane";
@@ -48,6 +49,42 @@ function load(): Persisted {
 }
 
 export function Shell() {
+  return (
+    <AnnouncerProvider>
+      <ShellInner />
+    </AnnouncerProvider>
+  );
+}
+
+/** The "click Start" gate: a modal dialog (the engine needs a user gesture), focus on its button. */
+function StartVeil({ onStart }: { onStart: () => void }) {
+  const card = useRef<HTMLDivElement>(null);
+  useFocusTrap(card, () => card.current?.querySelector("button") ?? null);
+  return (
+    <div className="wx-veil">
+      <div className="wx-veil-card" ref={card} role="dialog" aria-modal="true" aria-labelledby="wx-start-text" tabIndex={-1}>
+        <p id="wx-start-text">Click Start to turn the audio engine on (browsers need a click first).</p>
+        <button className="wx-btn primary" onClick={onStart}>▶ Start</button>
+      </div>
+    </div>
+  );
+}
+
+const WORKSPACE_LABEL = { pattern: "Pattern", arrange: "Arrange", mixer: "Mixer" } as const;
+
+/** Announces `text` when `key` changes (not on first render). */
+function useAnnounceChange(key: unknown, text: () => string | null) {
+  const say = useAnnounce();
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    const t = text();
+    if (t) say(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+}
+
+function ShellInner() {
   const c = useController({ newUi: true });
   const { project, dispatch, selectedPattern, selectedPatternId, selectedTarget, selectedTrack, mainView, layout } = c;
   const [ui, setUi] = useState<Persisted>(load);
@@ -60,6 +97,12 @@ export function Shell() {
     }
   }, [ui]);
   const shellRef = useRef<HTMLDivElement>(null);
+  // The root is also the controller's "app" element: it is made inert while the Musical Guide (a sibling of the root) is open.
+  const setRoot = useCallback((el: HTMLDivElement | null) => {
+    (shellRef as MutableRefObject<HTMLDivElement | null>).current = el;
+    (c.appRef as MutableRefObject<HTMLDivElement | null>).current = el;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [mixer, setMixer] = useState(false);
   const [menu, setMenu] = useState<MenuSection | null>(null);
   const [deviceTab, setDeviceTab] = useState<DeviceTab>("instrument");
@@ -76,6 +119,12 @@ export function Shell() {
   }, [firstTrackId]);
 
   const workspace: Workspace = mixer ? "mixer" : mainView === "composer" ? "arrange" : "pattern";
+  const deviceId = useId();
+  useAnnounceChange(workspace, () => `${WORKSPACE_LABEL[workspace]} workspace`);
+  useAnnounceChange(c.saveStatus, () => (c.saveStatus === "saved" ? "Project saved" : c.saveStatus === "error" ? `Save failed: ${c.saveError ?? "unknown error"}` : null));
+  useAnnounceChange(c.status, () => (c.status === "playing" ? "Playing" : c.status === "paused" ? "Paused" : "Stopped"));
+  useAnnounceChange(selectedTrack?.id ?? selectedTarget, () => (selectedTarget === "master" ? "Master selected" : selectedTrack ? `Track ${String(project.tracks.indexOf(selectedTrack) + 1).padStart(2, "0")}, ${selectedTrack.instrument || selectedTrack.assetId != null ? selectedTrack.name : "empty"}, selected` : null));
+  useAnnounceChange(selectedPatternId, () => `Pattern ${selectedPattern.name}`);
   const goto = (w: Workspace) => {
     setPhoneTab(null);
     setMixer(w === "mixer");
@@ -144,6 +193,7 @@ export function Shell() {
   const device = (
     <div className={`wx-device ${deviceOpen ? "open" : "closed"}`}>
       <PanelHeader
+        idBase={deviceId}
         title="DEVICE"
         subject={selectedTarget === "master" ? "MASTER" : selectedTrack ? `${String(index + 1).padStart(2, "0")} ${selectedTrack.name}` : undefined}
         tabs={selectedTarget === "master" ? [{ id: "fx" as DeviceTab, label: "FX" }] : [{ id: "instrument" as DeviceTab, label: "Instrument" }, { id: "fx" as DeviceTab, label: "FX & Route" }, { id: "notes" as DeviceTab, label: "Mod", title: "Arp, Track LFO and ties for this track" }]}
@@ -154,7 +204,7 @@ export function Shell() {
         actions={<button className={`wx-btn ${selectedTarget === "master" ? "active" : ""}`} onClick={() => handleSelectTarget(selectedTarget === "master" ? (selectedTrack?.id ?? project.tracks[0].id) : "master")} title="Edit the master bus">Master</button>}
       />
       {deviceOpen && (
-        <div className="wx-device-body">
+        <div className="wx-device-body" {...tabPanelProps(deviceId, selectedTarget === "master" ? "fx" : deviceTab)}>
           {(selectedTarget === "master" || deviceTab === "fx") && (
             <FxPanel
               target={selectedTarget}
@@ -215,6 +265,7 @@ export function Shell() {
 
   const sidebar = (
     <Sidebar
+      splitter={!narrow ? <Splitter axis="col" shellRef={shellRef} cssVar="--wx-library-w" value={ui.libraryWidth} min={200} max={480} direction={1} onCommit={(libraryWidth) => patchUi({ libraryWidth })} label="Resize library" /> : undefined}
       section={sidebarSection}
       onSection={(sec) => patchUi({ sidebar: sec })}
       onGuide={c.handleOpenGuide}
@@ -255,7 +306,8 @@ export function Shell() {
 
   const composer = c.composer;
   return (
-    <div className="wx" ref={shellRef} style={style} data-workspace={workspace} data-phone={narrow ? (phoneTab ?? "") : undefined}>
+    <>
+    <div className="wx" ref={setRoot} style={style} data-workspace={workspace} data-phone={narrow ? (phoneTab ?? "") : undefined}>
       {c.recoveryPrompt && (
         <div className="wx-banner" role="alert">
           <span>Previous session{c.recoveryPrompt.projectName ? ` “${c.recoveryPrompt.projectName}”` : ""} was not saved ({timeAgo(c.recoveryPrompt.savedAt)}).</span>
@@ -264,7 +316,8 @@ export function Shell() {
         </div>
       )}
 
-      <header className="wx-appbar" data-more={more ? "" : undefined}>
+      <header className="wx-appbar" role="banner" data-more={more ? "" : undefined}>
+        <h1 className="wx-sr-only">Webseq, {project.name || "Untitled project"}</h1>
         <button className="wx-icon-btn wx-menu-btn" onClick={() => setMenu("project")} aria-label="Main menu" title="Main menu: project, MIDI, help (⌘,)"><Icon name="menu" size={18} /></button>
         <div className="wx-project">
           <input className="wx-project-name" value={project.name} onChange={(e) => dispatch({ type: "SET_PROJECT_NAME", name: e.target.value })} onFocus={(e) => e.currentTarget.select()} aria-label="Project name" title="Rename the project" spellCheck={false} />
@@ -272,9 +325,9 @@ export function Shell() {
             <Icon name={c.saveStatus === "error" ? "close" : c.isDirty ? "save" : "check"} size={14} />
           </button>
         </div>
-        <nav className="wx-tabs primary" role="tablist" aria-label="Workspace">
+        <nav className="wx-tabs primary" role="tablist" aria-label="Workspace" onKeyDown={(e) => tabKeyDown(e, ["pattern", "arrange", "mixer"] as Workspace[], workspace, goto)}>
           {([["pattern", "Pattern", "steps", "1"], ["arrange", "Arrange", "arrange", "2"], ["mixer", "Mixer", "mixer", "3"]] as const).map(([id, label, icon, key]) => (
-            <button key={id} role="tab" aria-selected={workspace === id} className={`wx-tab ${workspace === id ? "active" : ""}`} onClick={() => goto(id)} title={`${label} (${key})`}>
+            <button key={id} role="tab" data-tab={id} id={`wx-tab-${id}`} aria-controls="wx-workspace-panel" aria-selected={workspace === id} tabIndex={workspace === id ? 0 : -1} aria-label={label} aria-keyshortcuts={key} className={`wx-tab ${workspace === id ? "active" : ""}`} onClick={() => goto(id)} title={`${label} (${key})`}>
               <Icon name={icon} /> <span className="wx-tab-text">{label}</span>
             </button>
           ))}
@@ -287,7 +340,7 @@ export function Shell() {
         <button className="wx-icon-btn wx-more" onClick={() => setMore((m) => !m)} aria-pressed={more} aria-label="More" title="Tempo, key and more"><Icon name="more" /></button>
       </header>
 
-      <div className="wx-contextbar">
+      <div className="wx-contextbar" role="region" aria-label="Context actions">
         {workspace === "pattern" && (
           <>
             {composer.editingSequence && <button className="wx-btn" onClick={composer.returnToComposer} title="Back to the Arrangement"><Icon name="back" /> {sequenceName(project, composer.editingSequence)}</button>}
@@ -332,9 +385,8 @@ export function Shell() {
 
       <div className="wx-body">
         {sidebar}
-        {sidebarSection && !narrow && <Splitter axis="col" shellRef={shellRef} cssVar="--wx-library-w" value={ui.libraryWidth} min={200} max={480} direction={1} onCommit={(libraryWidth) => patchUi({ libraryWidth })} label="Resize library" />}
         <main className="wx-main">
-          <div className="wx-workspace">
+          <div className="wx-workspace" id="wx-workspace-panel" role="tabpanel" aria-labelledby={`wx-tab-${workspace}`}>
             {workspace === "pattern" && (
               <PatternWorkspace
                 headWidth={headW}
@@ -431,24 +483,17 @@ export function Shell() {
       </div>
 
       {narrow && (
-        <nav className="wx-phonebar" role="tablist" aria-label="Sections">
+        <nav className="wx-phonebar" role="tablist" aria-label="Sections" onKeyDown={(e) => { const ids = ["pattern", "arrange", "mixer", "track", "library"] as const; const cur = phoneTab ?? workspace; tabKeyDown(e, [...ids], cur, (id) => (id === "track" || id === "library" ? setPhoneTab(id) : goto(id))); }}>
           {([["pattern", "Pattern"], ["arrange", "Arrange"], ["mixer", "Mixer"], ["track", "Track"], ["library", "Library"]] as const).map(([id, label]) => {
             const active = id === "track" || id === "library" ? phoneTab === id : phoneTab === null && workspace === id;
             return (
-              <button key={id} role="tab" aria-selected={active} className={`wx-tab ${active ? "active" : ""}`} onClick={() => (id === "track" || id === "library" ? setPhoneTab(id) : goto(id))}>{label}</button>
+              <button key={id} role="tab" data-tab={id} aria-selected={active} tabIndex={active ? 0 : -1} className={`wx-tab ${active ? "active" : ""}`} onClick={() => (id === "track" || id === "library" ? setPhoneTab(id) : goto(id))}>{label}</button>
             );
           })}
         </nav>
       )}
-      {c.error && <div className="wx-veil">Audio engine failed to start: {c.error}</div>}
-      {!c.runtime && !c.error && (
-        <div className="wx-veil">
-          <div className="wx-veil-card">
-            <p>Click Start to turn the audio engine on (browsers need a click first).</p>
-            <button className="wx-btn primary" onClick={c.handlePlay}>▶ Start</button>
-          </div>
-        </div>
-      )}
+      {c.error && <div className="wx-veil" role="alert">Audio engine failed to start: {c.error}</div>}
+      {!c.runtime && !c.error && <StartVeil onStart={c.handlePlay} />}
       {menu && (
         <MainMenu
           section={menu}
@@ -476,9 +521,10 @@ export function Shell() {
         />
       )}
       {cheat && <CheatSheet list={shortcuts} onClose={() => setCheat(false)} />}
-      {c.guideOpen && (
-        <MusicalGuide project={project} selectedPatternId={selectedPatternId} selectedTrackId={selectedTarget === "master" ? null : selectedTarget} getRuntime={c.getGuideRuntime} unavailableKinds={c.unavailableKinds} onApplyRecipe={c.handleApplyRecipe} onClose={c.handleCloseGuide} />
-      )}
     </div>
+    {c.guideOpen && (
+        <MusicalGuide project={project} selectedPatternId={selectedPatternId} selectedTrackId={selectedTarget === "master" ? null : selectedTarget} getRuntime={c.getGuideRuntime} unavailableKinds={c.unavailableKinds} onApplyRecipe={c.handleApplyRecipe} onClose={c.handleCloseGuide} />
+    )}
+    </>
   );
 }

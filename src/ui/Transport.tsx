@@ -69,7 +69,7 @@ export function Transport(p: TransportProps) {
           </label>
         )}
       </Popover>
-      <Popover label="Key and scale" title={`Key: ${formatScale(p.scale)}`} className="wx-chip" trigger={<><Icon name="key" /><span>{formatScale(p.scale)}</span></>}>
+      <Popover label={`${formatScale(p.scale)}, key and scale`} title={`Key: ${formatScale(p.scale)}`} className="wx-chip" trigger={<><Icon name="key" /><span>{formatScale(p.scale)}</span></>}>
         {(close) => <ScaleControl scale={p.scale} onChange={p.onScaleChange} onOpenGuide={() => { close(); p.onOpenGuide(); }} />}
       </Popover>
       <button className={`wx-icon-btn wx-rec wx-adv ${resampling ? "active" : ""}`} onClick={p.onResample} disabled={!p.canResample} aria-label="Resample" title={p.canResample ? "Resample one iteration of the playing pattern into a new sample" : "Resample (play a pattern first)"}>

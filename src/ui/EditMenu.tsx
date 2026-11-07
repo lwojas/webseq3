@@ -67,7 +67,7 @@ export function EditMenu({ history, clipboard, barTools, chopTools, feedback, co
         <ComposerDetails {...composer} />
       ) : (
         <>
-          <h4>Copy / paste</h4>
+          <h2>Copy / paste</h2>
           <div className="wx-edit-clip">
             {clipboard.map((row) => (
               <div key={row.id} className="wx-edit-clip-row">
@@ -77,11 +77,11 @@ export function EditMenu({ history, clipboard, barTools, chopTools, feedback, co
               </div>
             ))}
           </div>
-          <h4>Pattern</h4>
+          <h2>Pattern</h2>
           <Tools tools={barTools} />
           {showChop && (
             <>
-              <h4>Chop</h4>
+              <h2>Chop</h2>
               <Tools tools={chopTools} />
             </>
           )}

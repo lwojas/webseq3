@@ -315,7 +315,7 @@
 .wx-side-body { flex: 1; min-height: 0; overflow: auto; }
 .wx-side-hint { padding: 8px 10px 4px; margin: 0; }
 .wx-instruments { display: flex; flex-direction: column; padding-bottom: 8px; }
-.wx-instruments h4 { margin: 10px 10px 2px; font-weight: normal; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
+.wx-instruments h2 { margin: 10px 10px 2px; font-weight: normal; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); }
 .wx-list-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 26px; padding: 0 10px; background: transparent; border: 0; border-left: 2px solid transparent; color: var(--text); text-align: left; cursor: pointer; }
 .wx-list-item:hover { background: var(--panel-alt); }
 .wx-list-item.selected { border-left-color: var(--accent); color: var(--accent); background: var(--panel-alt); }
@@ -392,7 +392,7 @@
 
 /* ================= Edit menu ================= */
 .wx-edit-menu { width: 300px; max-height: 72vh; overflow: auto; margin: -10px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
-.wx-edit-menu h4 { margin: 10px 0 2px; font-weight: normal; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+.wx-edit-menu h2 { margin: 10px 0 2px; font-weight: normal; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 3px; }
 .wx-edit-history { display: flex; gap: 6px; }
 .wx-edit-history .wx-btn, .wx-edit-tool { display: inline-flex; align-items: center; gap: 6px; }
 .wx-edit-clip { display: flex; flex-direction: column; }
@@ -457,3 +457,13 @@
 }
 .wx select:not([multiple]):not([size]):hover:not(:disabled) { border-color: var(--accent-dim); }
 .wx select:not([multiple]):not([size]):disabled { opacity: 0.5; cursor: default; }
+
+/* visually hidden, still read by screen readers (no change to what is drawn) */
+.wx-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+.wx-menu-tabs { display: flex; flex-direction: column; gap: 2px; }
+@media (max-width: 768px) { .wx-menu-tabs { flex-direction: row; } }
+
+/* keyboard step cursor: only while the lane itself has keyboard focus */
+.wx-cursor { position: absolute; top: 3px; bottom: 3px; border: 1px dashed transparent; border-radius: 2px; pointer-events: none; }
+.wx-lane:focus-visible .wx-cursor { border-color: var(--text); }
+.wx-lane:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }

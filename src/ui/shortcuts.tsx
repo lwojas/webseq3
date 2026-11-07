@@ -3,6 +3,7 @@
 // the same list. Keys the V1 controller still handles itself (Space, [ ], undo/redo, copy/paste, Delete on a track) are listed
 // as `external` so the cheat-sheet is complete.
 import { useEffect, useRef } from "react";
+import { useFocusTrap } from "./kit/a11y";
 
 export interface Shortcut {
   /** Display text, e.g. "1", "⌘Z". */
@@ -53,15 +54,17 @@ export function useShortcuts(list: Shortcut[], blocked: boolean) {
 export function CheatSheet({ list, onClose }: { list: Shortcut[]; onClose: () => void }) {
   const all = [...list, ...EXTERNAL_SHORTCUTS];
   const scopes = ["Global", "Pattern", "Arrange", "Roll"] as const;
+  const card = useRef<HTMLDivElement>(null);
+  useFocusTrap(card);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
   return (
-    <div className="wx-veil" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="wx-veil-card wx-cheat">
-        <div className="wx-panel-title">KEYBOARD SHORTCUTS</div>
+    <div className="wx-veil" onPointerDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="wx-veil-card wx-cheat" ref={card} role="dialog" aria-modal="true" aria-labelledby="wx-cheat-title" tabIndex={-1}>
+        <h2 className="wx-panel-title" id="wx-cheat-title" style={{ margin: 0, fontWeight: "normal" }}>KEYBOARD SHORTCUTS</h2>
         {scopes.map((scope) => (
           <section key={scope}>
             <h3>{scope}</h3>
@@ -70,7 +73,7 @@ export function CheatSheet({ list, onClose }: { list: Shortcut[]; onClose: () =>
             ))}
           </section>
         ))}
-        <button className="wx-btn" onClick={onClose} autoFocus>Close (Esc)</button>
+        <button className="wx-btn" onClick={onClose}>Close (Esc)</button>
       </div>
     </div>
   );

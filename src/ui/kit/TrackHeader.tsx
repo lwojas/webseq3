@@ -37,12 +37,13 @@ export const TrackHeader = memo(function TrackHeader(p: TrackHeaderProps) {
       style={{ ["--identity" as string]: trackColor(p.index) }}
       onPointerDown={() => p.onSelect(p.id)}
       role="group"
+      aria-current={p.selected ? "true" : undefined}
       aria-label={`Track ${number} ${p.name}`}
     >
       <span className="wx-identity" aria-hidden />
       <span className="wx-track-num">{number}</span>
       <span className="wx-track-name" title={p.name}>{p.name}</span>
-      <span className="wx-track-src" title={SOURCE_LABEL[p.source]} aria-label={SOURCE_LABEL[p.source]}><Icon name={GLYPH[p.source]} size={12} /></span>
+      <span className="wx-track-src" role="img" title={SOURCE_LABEL[p.source]} aria-label={SOURCE_LABEL[p.source]}><Icon name={GLYPH[p.source]} size={12} /></span>
       <button className={`wx-ms ${p.muted ? "on mute" : ""}`} aria-pressed={p.muted} title="Mute" aria-label={`Mute ${p.name}`} onClick={(e) => { e.stopPropagation(); p.onMute(p.id, !p.muted); }}>M</button>
       <button className={`wx-ms ${p.soloed ? "on solo" : ""}`} aria-pressed={p.soloed} title="Solo" aria-label={`Solo ${p.name}`} onClick={(e) => { e.stopPropagation(); p.onSolo(p.id, !p.soloed); }}>S</button>
       {p.onNotesOff && (

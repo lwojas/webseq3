@@ -29,18 +29,18 @@ interface Props {
 
 const tracksUsed = (p: Pattern) => new Set(Object.values(p.notes).map((n) => n.trackId)).size;
 
-function NameField({ name, onCommit }: { name: string; onCommit: (name: string) => void }) {
-  const [editing, setEditing] = useState(false);
+function NameField({ name, editing, onStart, onDone, onCommit }: { name: string; editing: boolean; onStart: () => void; onDone: () => void; onCommit: (name: string) => void }) {
   const [draft, setDraft] = useState(name);
   const input = useRef<HTMLInputElement>(null);
-  useEffect(() => { if (editing) input.current?.select(); }, [editing]);
-  if (!editing) return <span className="wx-pat-name" onDoubleClick={() => { setDraft(name); setEditing(true); }} title="Double-click to rename">{name}</span>;
-  const done = () => { setEditing(false); if (draft.trim() && draft !== name) onCommit(draft.trim()); };
-  return <input ref={input} className="wx-pat-input" value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={done} onKeyDown={(e) => { if (e.key === "Enter") done(); else if (e.key === "Escape") setEditing(false); }} aria-label="Pattern name" />;
+  useEffect(() => { if (editing) { setDraft(name); input.current?.select(); } }, [editing]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!editing) return <span className="wx-pat-name" onDoubleClick={onStart} title="Double-click or press F2 to rename">{name}</span>;
+  const done = () => { onDone(); if (draft.trim() && draft !== name) onCommit(draft.trim()); };
+  return <input ref={input} className="wx-pat-input" value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={done} onKeyDown={(e) => { e.stopPropagation(); if (e.key === "Enter") done(); else if (e.key === "Escape") onDone(); }} aria-label="Pattern name" />;
 }
 
 export function PatternsPanel(p: Props) {
   const nameOf = (id: PatternId) => p.patterns.find((x) => x.id === id)?.name ?? "?";
+  const [renamingId, setRenamingId] = useState<PatternId | null>(null);
   const playingIndex = p.queue.findIndex((e) => e.id === p.playingEntryId);
   return (
     <div className="wx-pats">
@@ -48,16 +48,36 @@ export function PatternsPanel(p: Props) {
         <span>{p.patterns.length} pattern{p.patterns.length === 1 ? "" : "s"}</span>
         <button className="wx-icon-btn" onClick={p.onAdd} aria-label="New pattern" title="New pattern"><Icon name="plus" /></button>
       </div>
-      <ul className="wx-pat-list">
+      <ul className="wx-pat-list" aria-label="Patterns">
         {p.patterns.map((pat) => {
           const selected = pat.id === p.selectedPatternId;
           const playing = pat.id === p.playingPatternId;
           return (
             <li key={pat.id} className={`wx-pat ${selected ? "selected" : ""}`}>
-              <div className="wx-pat-row" onClick={() => p.onSelect(pat.id)} onDoubleClick={() => p.onEdit(pat.id)}>
-                <span className="wx-pat-state" title={playing ? "Playing" : undefined}>{playing && <Icon name="play" size={10} fill />}</span>
-                <NameField name={pat.name} onCommit={(n) => p.onRename(pat.id, n)} />
-                <span className="wx-pat-meta" title={`${pat.bars} bar${pat.bars === 1 ? "" : "s"}, ${tracksUsed(pat)} track${tracksUsed(pat) === 1 ? "" : "s"} used`}>{pat.bars} bar{pat.bars === 1 ? "" : "s"} · {tracksUsed(pat)}</span>
+              <div
+                className="wx-pat-row"
+                role={renamingId === pat.id ? "group" : "button"}
+                tabIndex={0}
+                aria-pressed={renamingId === pat.id ? undefined : selected}
+                onClick={() => p.onSelect(pat.id)}
+                onDoubleClick={() => p.onEdit(pat.id)}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget) return;
+                  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); p.onSelect(pat.id); }
+                  else if (e.key === "F2") { e.preventDefault(); setRenamingId(pat.id); }
+                  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    const rows = [...(e.currentTarget.closest("ul")?.querySelectorAll<HTMLElement>(".wx-pat-row") ?? [])];
+                    rows[rows.indexOf(e.currentTarget) + (e.key === "ArrowDown" ? 1 : -1)]?.focus();
+                  }
+                }}
+              >
+                <span className="wx-pat-state" title={playing ? "Playing" : undefined}>{playing && <><Icon name="play" size={10} fill /><span className="wx-sr-only">Playing</span></>}</span>
+                <NameField name={pat.name} editing={renamingId === pat.id} onStart={() => setRenamingId(pat.id)} onDone={() => setRenamingId(null)} onCommit={(n) => p.onRename(pat.id, n)} />
+                <span className="wx-pat-meta" title={`${pat.bars} bar${pat.bars === 1 ? "" : "s"}, ${tracksUsed(pat)} track${tracksUsed(pat) === 1 ? "" : "s"} used`}>
+                  <span aria-hidden="true">{pat.bars} bar{pat.bars === 1 ? "" : "s"} · {tracksUsed(pat)}</span>
+                  <span className="wx-sr-only">{pat.bars} bar{pat.bars === 1 ? "" : "s"}, {tracksUsed(pat)} track{tracksUsed(pat) === 1 ? "" : "s"} used</span>
+                </span>
               </div>
               {selected && (
                 <div className="wx-pat-actions" role="toolbar" aria-label={`${pat.name} actions`}>
@@ -76,7 +96,7 @@ export function PatternsPanel(p: Props) {
         })}
       </ul>
       <div className="wx-pats-head"><span title="Pattern mode plays these top to bottom, then loops">Queue</span></div>
-      <ol className="wx-queue">
+      <ol className="wx-queue" aria-label="Play queue">
         {p.queue.map((entry, i) => {
           const now = i === playingIndex;
           return (

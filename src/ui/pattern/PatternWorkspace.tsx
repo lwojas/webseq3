@@ -1,6 +1,6 @@
 // The Pattern workspace (default): the step lane, with an optional drawer under the selected track that goes
 // Steps -> Graph (one property per step) -> Roll (individual notes) as depths of the same track (03 §1).
-import { memo, useCallback, useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useCallback, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { createPortal } from "react-dom";
 import { BankBar } from "../../components/BankBar";
 import { GRID_RESOLUTIONS, type GridResolution } from "../../model/notes";
@@ -9,7 +9,7 @@ import { BANK_SIZE, type BankSummary } from "../../model/project";
 import type { ProjectScale } from "../../model/scale";
 import { totalBeats, notesForTrack, type Asset, type NoteId, type Pattern, type Track, type TrackId } from "../../model/types";
 import { Icon } from "../kit/Icon";
-import { PanelHeader, type TabDef } from "../kit/PanelHeader";
+import { PanelHeader, tabPanelProps, type TabDef } from "../kit/PanelHeader";
 import { Splitter } from "../kit/Splitter";
 import { trackColor } from "../kit/TrackHeader";
 import { PianoRoll, SNAPS, type ScrollSource } from "./PianoRoll";
@@ -75,6 +75,7 @@ const GRAPH_TABS: TabDef<DrawerTab>[] = [...STEP_PROPS.map((p) => ({ id: p.id as
 
 export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
   const { drawer, onDrawer, selectedTrack, pattern, dispatch } = p;
+  const drawerId = useId();
   const beats = totalBeats(pattern, p.beatsPerBar);
   // The lane's horizontal scroll, shared with the roll (a tiny external store: no React state, so scrolling never re-renders).
   const scroll = useRef({ left: 0, subs: new Set<() => void>() });
@@ -105,6 +106,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
   const drawerNode = drawer.open && selectedTrack ? (
     <div className={`wx-drawer ${drawer.maximised ? "maximised" : ""}`} style={{ ["--wx-drawer-h" as string]: `${drawer.height}px`, ["--identity" as string]: trackColor(trackIndex) } as CSSProperties}>
       <PanelHeader
+        idBase={drawerId}
         title="GRAPH"
         subject={`${String(trackIndex + 1).padStart(2, "0")} ${selectedTrack.name}`}
         tabs={tabs}
@@ -116,7 +118,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
         collapsed={false}
       />
       {tab === "roll" ? (
-        <div className="wx-drawer-body roll" style={{ height: drawer.maximised ? undefined : drawer.height + 150 }}>
+        <div className="wx-drawer-body roll" {...tabPanelProps(drawerId, tab)} style={{ height: drawer.maximised ? undefined : drawer.height + 150 }}>
           <PianoRoll
             linked={drawer.maximised ? undefined : { scroll: scrollSource, ppb: p.pxPerBeat, gutter: p.headWidth }}
             dispatch={dispatch}
@@ -137,7 +139,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
           />
         </div>
       ) : tab === "auto" ? (
-        <div className="wx-drawer-body auto">
+        <div className="wx-drawer-body auto" {...tabPanelProps(drawerId, tab)}>
           {p.automationRow ? (
             <div className="wx-auto" style={{ paddingLeft: "var(--wx-head-w)" }}>
               <div className="wx-auto-label"><span>{p.automationRow.label}</span><button className="wx-btn" onClick={p.automationRow.onClose} title="Hide the lane (the automation keeps playing)">Close</button></div>
@@ -150,7 +152,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
           )}
         </div>
       ) : tab === "chord" ? (
-        <div className="wx-drawer-body chord">
+        <div className="wx-drawer-body chord" {...tabPanelProps(drawerId, tab)}>
           <StepChord
             notes={selectedColumn === null ? [] : notesAtColumn(trackNotes, selectedColumn)}
             root={rootMidiNote(selectedTrack)}
@@ -163,7 +165,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
           />
         </div>
       ) : (
-        <div className="wx-drawer-body">
+        <div className="wx-drawer-body" {...tabPanelProps(drawerId, tab)}>
           <StepGraph
             pitch={{ root: rootMidiNote(selectedTrack), slices: effectiveSampleMode(selectedTrack) === "chop" ? Math.max(1, sliceCount(p.asset)) : null, scale: p.scale }}
             propId={tab as StepPropId}

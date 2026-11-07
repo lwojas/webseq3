@@ -1,10 +1,11 @@
 // The step graph (docs/rebuild/03-composition-model.md §4, §9): one step property as a bar per occupied step, on the same
 // columns as the lane above it. Painting previews by writing bar heights straight into the DOM and dispatches ONE batch on
 // release, so a drag is a single undo step and never re-renders the lane. A hatched bar means the step's notes disagree.
-import { memo, useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
+import { memo, useId, useMemo, useRef, type PointerEvent as ReactPointerEvent } from "react";
 import type { Action } from "../../model/reducer";
 import type { Note, PatternId } from "../../model/types";
 import { stepCells } from "./stepView";
+import { useAnnounce } from "../kit/a11y";
 import { pitchLabel } from "../../components/TrackEditor";
 import { pitchOptions } from "../../model/pitchOptions";
 import { isChromatic, isOffsetInScale, type ProjectScale } from "../../model/scale";
@@ -37,6 +38,8 @@ export const StepGraph = memo(function StepGraph({ pitch, propId, patternId, not
   const ref = useRef<HTMLDivElement>(null);
   const pending = useRef<Map<number, number> | null>(null);
   const hover = useRef<HTMLSpanElement>(null);
+  const say = useAnnounce();
+  const hintId = useId();
 
   const bars = [...cells.values()].filter((c) => c.kind !== "tail");
   const isPitch = propId === "pitch";
@@ -54,6 +57,35 @@ export const StepGraph = memo(function StepGraph({ pitch, propId, patternId, not
     return isPitch ? nearest(q) : q;
   };
   const columnAt = (e: ReactPointerEvent<HTMLDivElement>) => Math.floor((e.clientX - e.currentTarget.getBoundingClientRect().left) / px);
+
+  // Keyboard: Left/Right choose the previous / next step that has a note, Up/Down change its value (Shift = bigger steps).
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const onsets = bars.map((c) => c.column).sort((a, b) => a - b);
+    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+      if (onsets.length === 0) return;
+      e.preventDefault();
+      const cur = selectedColumn ?? -1;
+      const to = e.key === "ArrowRight" ? (onsets.find((c) => c > cur) ?? onsets[onsets.length - 1]) : ([...onsets].reverse().find((c) => c < cur) ?? onsets[0]);
+      const cell = cells.get(to);
+      onSelectColumn(to);
+      if (cell) say(`Step ${to + 1}, ${prop.label} ${text(prop.read(cell.notes).value)}${cell.notes.length > 1 ? `, ${cell.notes.length} notes` : ""}`);
+    } else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && selectedColumn !== null) {
+      const cell = cells.get(selectedColumn);
+      if (!cell || cell.kind === "tail") return;
+      e.preventDefault();
+      const cur = prop.read(cell.notes).value;
+      const dir = e.key === "ArrowUp" ? 1 : -1;
+      let next: number;
+      if (isPitch && allowed.length) {
+        const sorted = [...allowed].sort((a, b) => a - b);
+        next = dir > 0 ? (sorted.find((v) => v > cur) ?? sorted[sorted.length - 1]) : ([...sorted].reverse().find((v) => v < cur) ?? sorted[0]);
+      } else next = Math.min(prop.max, Math.max(prop.min, cur + dir * prop.step * (e.shiftKey ? 10 : 1)));
+      const action = writeStep(prop, patternId, cell.notes, next);
+      if (action) dispatch(action);
+      say(`${prop.label} ${text(next)}`);
+    }
+  };
 
   const paint = (e: ReactPointerEvent<HTMLDivElement>) => {
     const col = columnAt(e);
@@ -109,8 +141,14 @@ export const StepGraph = memo(function StepGraph({ pitch, propId, patternId, not
           onPointerMove={move}
           onPointerUp={up}
           onPointerCancel={() => { pending.current = null; }}
+          tabIndex={0}
+          onKeyDown={onKey}
+          role="group"
+          aria-roledescription="step graph"
           aria-label={`${prop.label} per step`}
+          aria-describedby={hintId}
         >
+          <span id={hintId} className="wx-sr-only">Left and Right choose a step that has a note. Up and Down change its {prop.label.toLowerCase()}, Shift for bigger steps.</span>
           {prop.min < 0 && <span className="wx-graph-zero" style={{ bottom: `${frac(0) * 100}%` }} />}
           {bars.map((cell) => {
             const v = prop.read(cell.notes);

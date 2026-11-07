@@ -1,5 +1,6 @@
 // The piano roll: a canvas that draws only what is on screen. Scrolling and zooming redraw it; transport playback does not (the
 // playhead is a separate transform-only element). Notes are V1 Notes: `pitch` is semitones above the track's own pitch.
+import { useId } from "react";
 import { memo, type ReactNode, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { usePlayheadAnimation } from "../../hooks/usePlayheadAnimation";
 import { effectiveSampleMode, sliceCount } from "../../model/chop";
@@ -9,6 +10,7 @@ import { rollCopyNotes, type CopiedRollNote } from "../../model/roll";
 import { isChromatic, isOffsetInScale } from "../../model/scale";
 import { chordLabel } from "../../components/TrackEditor";
 import { chordMidis } from "../../model/chord";
+import { useAnnounce } from "../kit/a11y";
 import type { Asset, Note, NoteId, Pattern, Track } from "../../model/types";
 import type { Action } from "../../model/reducer";
 import type { ProjectScale } from "../../model/scale";
@@ -105,6 +107,8 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
   }, [notes, chop, slices, scale, root, base]);
   const rows = pMax - pMin + 1;
 
+  const say = useAnnounce();
+  const hintId = useId();
   const [ownPpb, setPpb] = useState(24);
   const ppb = linked ? linked.ppb : ownPpb;
   const KEYS_W = linked ? linked.gutter : KEYS_DEFAULT_W;
@@ -558,6 +562,24 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
       const span = Math.max(...picked.map((n) => n.start + n.duration)) - Math.min(...picked.map((n) => n.start));
       pendingAdd.current = new Set(live.current.notes.map((n) => n.id));
       dispatch({ type: "ROLL_DUPLICATE_NOTES", patternId: pid, noteIds: sel, dStart: Math.ceil(span / live.current.snap) * live.current.snap });
+    } else if (e.altKey && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
+      // Alt+Left/Right: choose the previous / next note by start time (the roll is otherwise only pointer-selectable).
+      e.preventDefault();
+      const ordered = [...live.current.notes].sort((a, b) => a.start - b.start || (a.pitch ?? 0) - (b.pitch ?? 0));
+      if (ordered.length === 0) { say("No notes"); return; }
+      const at = sel.length ? ordered.findIndex((n) => n.id === sel[0]) : -1;
+      const to = at < 0 ? (e.key === "ArrowRight" ? 0 : ordered.length - 1) : Math.max(0, Math.min(ordered.length - 1, at + (e.key === "ArrowRight" ? 1 : -1)));
+      const n = ordered[to];
+      onSelection([n.id]);
+      cursor.current = n.start;
+      say(`Note ${to + 1} of ${ordered.length}, step ${Math.floor(n.start) + 1}, ${n.chord ? "chord" : `pitch ${n.pitch ?? 0}`}, length ${n.duration}`);
+    } else if (e.key === "Enter" && !sel.length) {
+      // Enter with nothing selected adds a note at the cursor (the last place chosen, or the start), at the track's own pitch.
+      e.preventDefault();
+      const start = clamp(snapTo(cursor.current, "floor"), 0, live.current.totalBeats - live.current.snap);
+      pendingAdd.current = new Set(live.current.notes.map((n) => n.id));
+      dispatch({ type: "ROLL_ADD_NOTE", patternId: pid, trackId: track.id, start, pitch: 0, duration: lastDur.current, velocity: 0.8, resolution: live.current.snap });
+      say(`Note added at step ${Math.floor(start) + 1}. Arrow keys move it, Shift with Up or Down moves an octave.`);
     } else if (e.key === "Escape") {
       onSelection([]);
     } else if (sel.length && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
@@ -602,7 +624,9 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
         <span className="wx-note">{notes.length} note{notes.length === 1 ? "" : "s"}{selection.size ? ` · ${selection.size} selected` : ""}</span>
         <span className="wx-note hint">click draws · drag moves · edge resizes · ⇧ drag selects · ⌫ deletes · ⌘D duplicates</span>
       </div>
-      <div className={`wx-roll-scroll wx-scroll ${linked ? "linked" : ""}`} ref={scrollRef} tabIndex={0} onKeyDown={onKey} onScroll={() => { velScrollSync.current = scrollRef.current?.scrollLeft ?? 0; if (false) void 0; invalidate(); }} aria-label="Piano roll">
+      <div className={`wx-roll-scroll wx-scroll ${linked ? "linked" : ""}`} ref={scrollRef} tabIndex={0} onKeyDown={onKey} onScroll={() => { velScrollSync.current = scrollRef.current?.scrollLeft ?? 0; if (false) void 0; invalidate(); }} aria-label="Piano roll" role="group" aria-roledescription="piano roll" aria-describedby={hintId}>
+        <span id={hintId} className="wx-sr-only">Alt with Left or Right chooses a note. Enter adds a note at the cursor. Arrow keys move the selected notes, Shift with Up or Down moves them an octave. Delete removes them, Command or Control with D duplicates them.</span>
+        <span className="wx-sr-only" aria-live="polite">{notes.length} note{notes.length === 1 ? "" : "s"}{selection.size ? `, ${selection.size} selected` : ""}</span>
         <div className="wx-roll-spacer" style={{ width: contentW, height: contentH }}>
           <canvas ref={canvasRef} className="wx-roll-canvas" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up} onDoubleClick={(e) => {
             const h = hit(toBeat(e.clientX), toPitch(e.clientY));

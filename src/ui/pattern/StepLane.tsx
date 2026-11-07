@@ -2,13 +2,14 @@
 // derived view of the notes (stepView.ts): only occupied steps and note tails are DOM; the grid itself is a CSS background and
 // empty steps are hit-tested by arithmetic, so a 64-bar pattern costs the same as a 1-bar one. Rows are memoised on the
 // track's notes (useStableTrackNotes), so editing one track re-renders one row. The playhead is a transform-only element.
-import { memo, useCallback, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { memo, useCallback, useId, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { usePlayheadAnimation } from "../../hooks/usePlayheadAnimation";
 import { useStableTrackNotes } from "../../hooks/useStableTrackNotes";
 import { effectiveSampleMode } from "../../model/chop";
 import { isTrackOffInPattern } from "../../model/patternSettings";
 import { totalBeats, type Note, type NoteId, type Pattern, type Track, type TrackId } from "../../model/types";
 import { TrackHeader } from "../kit/TrackHeader";
+import { useAnnounce } from "../kit/a11y";
 import { columnOf, notesAtColumn, stepCells } from "./stepView";
 
 /** Width of the sticky track-header column: a CSS variable (--wx-head-w) so a phone can narrow it without JS. */
@@ -162,6 +163,9 @@ const StepRow = memo(function StepRow(p: RowProps) {
     );
   }
 
+  // Keyboard cursor on a step with no note (an occupied step is outlined by its pad). Visible only while the lane has keyboard focus.
+  if (p.selectedColumn !== null && !cells.has(p.selectedColumn)) pads.push(<span key="cursor" className="wx-cursor" style={{ left: p.selectedColumn * px, width: px - 1 }} aria-hidden />);
+
   const label = trackHasSourceLabel(track);
   return (
     <div className={`wx-row ${p.selected ? "selected" : ""} ${isTrackOffInPattern(p.pattern, track.id) ? "notes-off" : ""}`}>
@@ -225,10 +229,23 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
   const beats = totalBeats(p.pattern, p.beatsPerBar);
   const notesByTrack = useStableTrackNotes(p.pattern, p.tracks);
   const playhead = usePlayheadAnimation(p.getPlayheadBeat, p.pxPerBeat, p.active);
+  const say = useAnnounce();
+  const hintId = useId();
+  /** "Track 03, Snare, step 5, 2 notes": what the keyboard cursor is on. */
+  const describe = (trackId: TrackId, column: number) => {
+    const i = p.tracks.findIndex((t) => t.id === trackId);
+    const t = p.tracks[i];
+    if (!t) return "";
+    const here = notesAtColumn(notesByTrack.get(trackId) ?? [], column);
+    const what = here.length === 0 ? "empty" : here.length === 1 ? (here[0].chord ? "chord" : here[0].duration > 1 ? `note, length ${here[0].duration} steps` : "note") : `${here.length} notes`;
+    return `Track ${String(p.trackOffset + i + 1).padStart(2, "0")}, ${t.instrument || t.assetId != null ? t.name : "empty track"}, step ${column + 1}, ${what}`;
+  };
   const bars = Math.ceil(beats / p.beatsPerBar);
   const { onRemoveNotes, step, pattern, onSelectStep } = p;
 
   const keys = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
+    // Only keys pressed on the lane itself: the graph, the roll and the track buttons are inside it and handle their own keys.
+    if (e.target !== e.currentTarget) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const idx = Math.max(0, p.tracks.findIndex((t) => t.id === (step?.trackId ?? p.selectedTrackId)));
     const trackId = p.tracks[idx]?.id;
@@ -236,27 +253,33 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
     const col = step?.column ?? 0;
     if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
       e.preventDefault();
-      onSelectStep({ trackId, column: Math.max(0, Math.min(beats - 1, col + (e.key === "ArrowRight" ? 1 : -1))) });
+      const column = Math.max(0, Math.min(beats - 1, col + (e.key === "ArrowRight" ? 1 : -1)));
+      onSelectStep({ trackId, column });
+      say(describe(trackId, column));
     } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       const next = p.tracks[Math.max(0, Math.min(p.tracks.length - 1, idx + (e.key === "ArrowDown" ? 1 : -1)))];
       p.onSelectTrack(next.id);
       onSelectStep({ trackId: next.id, column: col });
+      say(describe(next.id, col));
     } else if (e.key === "Enter" && step) {
       e.preventDefault();
       const here = notesAtColumn(notesByTrack.get(step.trackId) ?? [], step.column);
-      if (here.length === 0) p.onAddNote(step.trackId, step.column);
-      else if (here.length === 1) onRemoveNotes([here[0].id]);
+      if (here.length === 0) { p.onAddNote(step.trackId, step.column); say(`Step ${step.column + 1} on`); }
+      else if (here.length === 1) { onRemoveNotes([here[0].id]); say(`Step ${step.column + 1} off`); }
+      else say(`${here.length} notes at step ${step.column + 1}. Press Delete to remove them, or open the piano roll.`);
     } else if ((e.key === "Delete" || e.key === "Backspace") && step) {
       // The controller's own Delete would clear the whole track when no single note is selected; a step delete never escalates.
       e.preventDefault();
       e.stopPropagation();
-      onRemoveNotes(notesAtColumn(notesByTrack.get(step.trackId) ?? [], step.column).map((n) => n.id));
+      const gone = notesAtColumn(notesByTrack.get(step.trackId) ?? [], step.column).map((n) => n.id);
+      onRemoveNotes(gone);
+      say(gone.length === 0 ? `Step ${step.column + 1} is empty` : `Removed ${gone.length} note${gone.length === 1 ? "" : "s"} at step ${step.column + 1}`);
     } else if (e.key === "Escape") {
       p.onClearSelection();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p.tracks, p.selectedTrackId, step, beats, notesByTrack, onRemoveNotes, onSelectStep, pattern, p.onAddNote, p.onSelectTrack, p.onClearSelection]);
+  }, [p.tracks, p.selectedTrackId, step, beats, notesByTrack, onRemoveNotes, onSelectStep, pattern, p.onAddNote, p.onSelectTrack, p.onClearSelection, say]);
 
   const ruler = useMemo(() => {
     const marks: ReactNode[] = [];
@@ -265,7 +288,8 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
   }, [bars, p.beatsPerBar, p.pxPerBeat]);
 
   return (
-    <div className="wx-lane" tabIndex={0} onKeyDown={keys} onScroll={(e) => p.onScrollLeft?.(e.currentTarget.scrollLeft)} aria-label="Step sequencer" role="grid">
+    <div className="wx-lane" tabIndex={0} onKeyDown={keys} onScroll={(e) => p.onScrollLeft?.(e.currentTarget.scrollLeft)} aria-label="Step sequencer" role="group" aria-roledescription="step sequencer" aria-describedby={hintId}>
+      <span id={hintId} className="wx-sr-only">Arrow keys move the step cursor between steps and tracks. Enter adds or removes a note. Delete removes the notes at the cursor. Press G to open the graph for the selected track.</span>
       <div className="wx-lane-inner" style={{ width: `calc(${HEAD} + ${beats * p.pxPerBeat}px)` }}>
         <div className="wx-ruler">
           <div className="wx-ruler-corner" style={{ width: HEAD }} />
