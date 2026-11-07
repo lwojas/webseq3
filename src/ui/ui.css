@@ -91,8 +91,6 @@
 }
 .wx-tab:hover { color: var(--text); }
 .wx-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.wx-tabs.primary { margin-left: 0; }
-.wx-tabs.primary .wx-tab { font-size: 11px; height: 36px; padding: 0 12px; }
 .wx-panel-header {
   flex: none;
   display: flex;
@@ -268,8 +266,13 @@
 .wx-save-dot { background: transparent; border: 0; width: 22px; height: 22px; padding: 0; color: var(--text-dim); border-radius: 3px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
 .wx-save-dot.dirty { color: var(--amber); }
 .wx-save-dot:hover { background: var(--panel-alt); }
-.wx-tabs.primary { margin: 0; gap: 0; }
-.wx-tabs.primary .wx-tab { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 15px 12px 0; font-size: 11px; border-bottom-width: 2px; }
+/* workspace switch: a segmented control (a recessed track with a raised selected segment), not underlined tabs. Segments shrink to
+   icon-only as the window narrows, so it stays one compact control at any width. */
+.wx-tabs.primary { margin: 0; gap: 2px; padding: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 7px; }
+.wx-tabs.primary .wx-tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 26px; min-width: 30px; padding: 0 12px; font-size: 11px; letter-spacing: 0.03em; text-transform: none; border: 1px solid transparent; border-radius: 5px; color: var(--text-dim); }
+.wx-tabs.primary .wx-tab:hover { color: var(--text); background: color-mix(in srgb, var(--panel-alt) 60%, transparent); }
+.wx-tabs.primary .wx-tab.active { color: var(--text); background: var(--panel-alt); border-color: var(--border-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35); }
+.wx-tabs.primary .wx-tab.active svg { color: var(--accent); }
 .wx-transport { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; justify-content: center; }
 .wx-play.active { color: var(--accent); }
 .wx-position { min-width: 170px; text-align: center; font-variant-numeric: tabular-nums; color: var(--accent); letter-spacing: 0.04em; white-space: nowrap; padding: 0 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; height: 24px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; }
@@ -343,7 +346,7 @@
 .wx-saved-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ================= responsive ================= */
-@media (max-width: 1240px) { .wx-tab-text { display: none; } .wx-tabs.primary .wx-tab { padding: 0 10px; } .wx-position { min-width: 130px; } }
+@media (max-width: 1240px) { .wx-tab-text { display: none; } .wx-tabs.primary .wx-tab { padding: 0 8px; } .wx-position { min-width: 130px; } }
 @media (max-width: 1060px) { .wx-project-name { width: 110px; } .wx-chip span { display: none; } }
 
 /* compact / phone (docs/rebuild/04-ui-rules.md §15): one section at a time, same context bar and actions */
@@ -361,8 +364,9 @@
   .wx-appbar[data-more] .wx-transport { flex: 1 0 100%; flex-wrap: wrap; justify-content: flex-start; order: 5; }
   .wx .wx-ms { width: 26px; height: 26px; }
   .wx-phonebar { flex: none; display: flex; background: var(--panel); border-top: 1px solid var(--wx-hairline); }
-  .wx-phonebar .wx-tab { flex: 1; height: 44px; border-bottom: 0; border-top: 2px solid transparent; font-size: 10px; }
-  .wx-phonebar .wx-tab.active { border-top-color: var(--accent); }
+  .wx-phonebar { padding: 4px; gap: 2px; }
+  .wx-phonebar .wx-tab { flex: 1; height: 38px; margin: 0; border: 0; border-radius: 6px; font-size: 10px; }
+  .wx-phonebar .wx-tab.active { background: var(--panel-alt); color: var(--accent); }
   .wx-track-src, .wx-track-num, .wx-ms.off, .wx-ms[title^="Switch"], .wx-ms[title^="Notes off"] { display: none; }
   .wx-toolbar .wx-note.hint { display: none; }
   .wx-contextbar { overflow-x: auto; }
@@ -424,3 +428,32 @@
 .wx-queue-actions { display: none; flex: none; }
 .wx-queue-item:hover .wx-queue-actions, .wx-queue-item:focus-within .wx-queue-actions { display: inline-flex; }
 .wx-queue-actions .wx-icon-btn { min-width: 20px; height: 20px; }
+
+/* ===== secondary tab strips (graph drawer, device area, ...): the same segmented language as the workspace switch, smaller ===== */
+.wx-panel-header { height: 28px; }
+.wx-tabs:not(.primary) { gap: 1px; padding: 2px; margin-left: 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.wx-tabs:not(.primary) .wx-tab { height: 20px; padding: 0 9px; border: 1px solid transparent; border-radius: 4px; }
+.wx-tabs:not(.primary) .wx-tab:hover { background: color-mix(in srgb, var(--panel-alt) 60%, transparent); }
+.wx-tabs:not(.primary) .wx-tab.active { color: var(--accent); background: var(--panel-alt); border-color: var(--border-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+/* the bank switch (A B C D) */
+.wx-toolbar .bank-bar { display: inline-flex; flex: none; gap: 1px; padding: 2px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+.wx-toolbar .bank-tab { height: 20px; padding: 0 10px; border: 1px solid transparent; border-radius: 4px; }
+.wx-toolbar .bank-tab:hover { background: color-mix(in srgb, var(--panel-alt) 60%, transparent); }
+.wx-toolbar .bank-tab.active { background: var(--panel-alt); color: var(--accent); border-color: var(--border-strong); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3); }
+.wx-toolbar .bank-bar-corner .bank-tab { flex: none; gap: 5px; padding: 0 10px; }
+.wx-toolbar .bank-bar-corner .bank-tab:last-child { border-right: 1px solid transparent; }
+
+/* ===== select: one custom chevron with room around it (the native one touches the border and ignores padding) ===== */
+.wx select:not([multiple]):not([size]) {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 24px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none' stroke='%238b96a8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 3.5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px 10px;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+.wx select:not([multiple]):not([size]):hover:not(:disabled) { border-color: var(--accent-dim); }
+.wx select:not([multiple]):not([size]):disabled { opacity: 0.5; cursor: default; }
