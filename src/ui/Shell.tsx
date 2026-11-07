@@ -3,7 +3,6 @@
 // V1 controller's (state/useController.tsx). Enabled with ?ui=2 until the parity checklist is complete.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ComposerTimeline } from "../components/ComposerTimeline";
-import { EditPanel } from "../components/EditPanel";
 import { FxPanel } from "../components/FxPanel";
 import { InstrumentPanel } from "../components/InstrumentPanel";
 import { MixerPanel } from "../components/MixerPanel";
@@ -14,6 +13,7 @@ import { maxPatternBars, sequenceName } from "../model/composer";
 import { trackById, type FxId, type NoteId } from "../model/types";
 import { timeAgo } from "../persistence/recovery";
 import { useController } from "../state/useController";
+import { EditMenu } from "./EditMenu";
 import { Icon } from "./kit/Icon";
 import { Popover } from "./kit/Popover";
 import { MainMenu, type MenuSection } from "./MainMenu";
@@ -231,20 +231,23 @@ export function Shell() {
         auditionDisabled: c.resamplePhase === "pending",
       }}
       patterns={{
-        list: {
-          patterns: c.launcher,
-          selectedPatternId,
-          playingPatternId: c.playingPatternId,
-          onSelect: c.setSelectedPatternId,
-          onAddToComposer: c.handleAddToComposer,
-          onEdit: c.handleEditPattern,
-          onDuplicate: c.duplicatePattern,
-          onRemove: c.removePattern,
-          onRename: c.renamePattern,
-          onSetBars: c.setPatternBars,
-          onQueueNext: c.handleQueueNext,
-        },
-        queue: { patternChain: project.patternChain, patterns: c.launcher, playingChainEntryId: c.playingChainEntryId, onRemoveEntry: c.handleRemoveChainEntry, onMoveEntry: c.handleMoveChainEntry, getPlayingBarText: c.getPlayingBarText },
+        patterns: c.launcher,
+        selectedPatternId,
+        playingPatternId: c.playingPatternId,
+        onSelect: c.setSelectedPatternId,
+        onEdit: c.handleEditPattern,
+        onAdd: c.addPattern,
+        onDuplicate: c.duplicatePattern,
+        onRemove: c.removePattern,
+        onRename: c.renamePattern,
+        onSetBars: c.setPatternBars,
+        onQueueNext: c.handleQueueNext,
+        onAddToArrange: c.handleAddToComposer,
+        queue: project.patternChain,
+        playingEntryId: c.playingChainEntryId,
+        onRemoveEntry: c.handleRemoveChainEntry,
+        onMoveEntry: c.handleMoveChainEntry,
+        getPlayingBarText: c.getPlayingBarText,
       }}
       instruments={{ track: selectedTrack ?? null, unavailable: c.unavailableKinds, onSet: c.handleSetInstrument }}
     />
@@ -276,10 +279,6 @@ export function Shell() {
             </button>
           ))}
         </nav>
-        <div className="wx-undo">
-          <button className="wx-icon-btn" onClick={c.handleUndo} disabled={!c.canUndo} title="Undo (⌘Z)" aria-label="Undo"><Icon name="undo" /></button>
-          <button className="wx-icon-btn" onClick={c.handleRedo} disabled={!c.canRedo} title="Redo (⇧⌘Z)" aria-label="Redo"><Icon name="redo" /></button>
-        </div>
         <Transport {...c.transportProps} />
         <button className="wx-icon-btn" onClick={() => setMenu("midi")} aria-label="MIDI" title={c.midi.status === "connected" ? "MIDI controller connected" : "MIDI devices"}>
           <Icon name="midi" />{c.midi.status === "connected" && <i className="wx-dot on" />}
@@ -309,21 +308,24 @@ export function Shell() {
             <button className="wx-icon-btn" onClick={() => c.duplicatePattern(selectedPatternId)} aria-label="Duplicate pattern" title="Duplicate this pattern and open the copy"><Icon name="copy" /></button>
             <button className="wx-icon-btn" onClick={() => c.handleAddToComposer(selectedPatternId)} aria-label="Add to Arrange" title="Place this pattern on the Arrangement"><Icon name="arrangeAdd" /></button>
             <Popover label="Edit" title="Edit: copy and paste tracks, instruments, FX; bar tools" className="wx-btn" align="right" trigger={<><Icon name="pencil" /> Edit <Icon name="chevronDown" size={12} /></>}>
-              {() => <div className="wx-edit-menu"><EditPanel {...c.editProps} /></div>}
+              {() => <EditMenu {...c.editProps} />}
             </Popover>
           </>
         )}
         {workspace === "arrange" && (
           <>
-            <span className="wx-crumb">{composer.sequence ? `▸ ${composer.lane?.name ?? ""} · ${sequenceName(project, composer.sequence)}` : "▸ select a clip; double-click to open its pattern"}</span>
+            <span className="wx-crumb">{composer.sequence ? `${composer.lane?.name ?? ""} · ${sequenceName(project, composer.sequence)}` : "Select a clip; double-click to open its pattern"}</span>
             <span className="wx-spacer" />
+            <Popover label="Edit" title="Edit: the selected clip and lane, history" className="wx-btn" align="right" trigger={<><Icon name="pencil" /> Edit <Icon name="chevronDown" size={12} /></>}>
+              {() => <EditMenu {...c.editProps} />}
+            </Popover>
           </>
         )}
         {workspace === "mixer" && (
           <>
-            <span className="wx-crumb">▸ Bank {String.fromCharCode(65 + c.activeBank)} · tracks {c.activeBank * BANK_SIZE + 1}–{(c.activeBank + 1) * BANK_SIZE}</span>
-            <button className="wx-icon-btn" disabled={c.activeBank === 0} onClick={() => c.setActiveBank(c.activeBank - 1)} aria-label="Previous bank">◂</button>
-            <button className="wx-icon-btn" disabled={c.activeBank >= 3} onClick={() => c.setActiveBank(c.activeBank + 1)} aria-label="Next bank">▸</button>
+            <span className="wx-crumb">Bank {String.fromCharCode(65 + c.activeBank)} · tracks {c.activeBank * BANK_SIZE + 1}–{(c.activeBank + 1) * BANK_SIZE}</span>
+            <button className="wx-icon-btn" disabled={c.activeBank === 0} onClick={() => c.setActiveBank(c.activeBank - 1)} aria-label="Previous bank" title="Previous bank"><Icon name="chevronLeft" size={14} /></button>
+            <button className="wx-icon-btn" disabled={c.activeBank >= 3} onClick={() => c.setActiveBank(c.activeBank + 1)} aria-label="Next bank" title="Next bank"><Icon name="chevronRight" size={14} /></button>
           </>
         )}
       </div>

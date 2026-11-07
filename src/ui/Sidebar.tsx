@@ -3,8 +3,7 @@
 // elsewhere: MIDI and project management in the main menu, copy/paste and bar tools in the Edit menu, the Musical Guide as a tool button.
 import type { ComponentProps } from "react";
 import { AssetsPanel } from "../components/AssetsPanel";
-import { PatternList } from "../components/PatternList";
-import { PatternQueue } from "../components/PatternQueue";
+import { PatternsPanel } from "./PatternsPanel";
 import { INSTRUMENT_DEFS, INSTRUMENT_KINDS } from "../model/instruments";
 import type { InstrumentKindId, Track, TrackId } from "../model/types";
 import { Icon, type IconName } from "./kit/Icon";
@@ -23,7 +22,7 @@ interface Props {
   onSection: (s: SidebarSection | null) => void;
   onGuide: () => void;
   samples: ComponentProps<typeof AssetsPanel>;
-  patterns: { list: ComponentProps<typeof PatternList>; queue: ComponentProps<typeof PatternQueue> };
+  patterns: ComponentProps<typeof PatternsPanel>;
   instruments: {
     track: Track | null;
     unavailable: InstrumentKindId[];
@@ -49,12 +48,7 @@ export function Sidebar({ section, onSection, onGuide, samples, patterns, instru
           <div className="wx-side-title">{title}</div>
           <div className="wx-side-body">
             {section === "samples" && <AssetsPanel {...samples} />}
-            {section === "patterns" && (
-              <div className="wx-patterns">
-                <PatternList {...patterns.list} />
-                <PatternQueue {...patterns.queue} />
-              </div>
-            )}
+            {section === "patterns" && <PatternsPanel {...patterns} />}
             {section === "instruments" && <InstrumentBrowser {...instruments} />}
           </div>
         </div>

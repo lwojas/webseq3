@@ -49,6 +49,9 @@ const P = {
   graph: "M3 12.5V9M6.5 12.5V5M10 12.5V7.5M13.5 12.5V3.5",
   roll: "M2.5 4.5h4M7.5 7h5M4.5 9.5h4M9.5 12h4",
   note: "M6 12.5a1.8 1.5 0 100-.01M7.8 11.5V3.5l4 1.2",
+  paste: "M5.5 3.5h5v2h-5zM4 4.5v8.5h8V4.5",
+  chevronUp: "M4 9.5l4-4 4 4",
+  queueAdd: "M2.5 4.5h8M2.5 8h6M2.5 11.5h4M12 8.5v5M9.5 11h5",
   sample: "M2 8h1.5M5 5v6M7.5 3v10M10 5.5v5M12.5 7v2",
 } as const;
 

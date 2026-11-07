@@ -191,13 +191,15 @@
 /* pads: shape carries the kind, colour only reinforces it */
 .wx-pad { position: absolute; top: 4px; bottom: 4px; --identity: var(--accent); }
 .wx-pad-body { position: absolute; left: 0; top: 0; bottom: 0; background: color-mix(in srgb, var(--accent) calc(40% + var(--vel, 1) * 60%), var(--bg)); border-radius: 2px; }
-.wx-pad::after { content: ""; position: absolute; left: 0; right: 0; top: 40%; bottom: 40%; background: color-mix(in srgb, var(--accent) 45%, transparent); z-index: -1; }
+/* the note's length: a bar continuing from the onset pad to the end of the note (--px is the step width, set on the row) */
+.wx-pad::after { content: ""; position: absolute; left: calc(var(--px) - 1px); right: 0; top: 34%; bottom: 34%; background: color-mix(in srgb, var(--accent) 78%, var(--bg)); border-radius: 0 2px 2px 0; pointer-events: none; }
+.wx-pad.single .wx-pad-body, .wx-pad.multi .wx-pad-body { z-index: 1; }
 .wx-pad.multi .wx-pad-body { background: var(--accent); border-radius: 2px; box-shadow: inset 0 0 0 1px var(--bg); background-image: repeating-linear-gradient(to bottom, transparent 0 3px, color-mix(in srgb, var(--bg) 70%, transparent) 3px 4px); }
 .wx-pad.multi[data-count]::before { content: attr(data-count); position: absolute; right: 100%; margin-right: -2px; top: -3px; font-size: 9px; color: var(--text-dim); z-index: 2; }
 .wx-pad.selected .wx-pad-body { outline: 2px solid var(--text); outline-offset: 1px; }
 .wx-pips { position: absolute; left: 1px; bottom: -1px; display: flex; gap: 1px; font-size: 8px; line-height: 8px; pointer-events: none; color: var(--bg); }
 .wx-pip { font-style: normal; background: var(--amber); padding: 0 2px; border-radius: 1px; }
-.wx-resize { position: absolute; right: 0; top: 0; bottom: 0; cursor: ew-resize; }
+.wx-resize { position: absolute; right: 0; top: 0; bottom: 0; cursor: ew-resize; z-index: 2; }
 .wx-pad.single .wx-resize { right: 0; left: auto; }
 .wx-playhead-layer { position: absolute; top: 0; bottom: 0; right: 0; pointer-events: none; z-index: 5; }
 .wx-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--accent); will-change: transform; }
@@ -265,8 +267,7 @@
 .wx-save-dot.dirty { color: var(--amber); }
 .wx-save-dot:hover { background: var(--panel-alt); }
 .wx-tabs.primary { margin: 0; gap: 0; }
-.wx-tabs.primary .wx-tab { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 12px; font-size: 11px; }
-.wx-undo { display: inline-flex; }
+.wx-tabs.primary .wx-tab { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 15px 12px 0; font-size: 11px; border-bottom-width: 2px; }
 .wx-transport { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; justify-content: center; }
 .wx-play.active { color: var(--accent); }
 .wx-position { min-width: 170px; text-align: center; font-variant-numeric: tabular-nums; color: var(--accent); letter-spacing: 0.04em; white-space: nowrap; padding: 0 8px; background: var(--bg); border: 1px solid var(--border); border-radius: 3px; height: 24px; line-height: 22px; overflow: hidden; text-overflow: ellipsis; }
@@ -292,7 +293,7 @@
 .wx-popover .scale-control { flex-wrap: wrap; gap: 8px; max-width: 420px; }
 .wx-popover-field { display: flex; align-items: center; gap: 8px; color: var(--text-dim); }
 .wx-popover-value { min-width: 34px; text-align: right; color: var(--text); }
-.wx-edit-menu { width: 360px; max-height: 70vh; overflow: auto; margin: -10px; }
+
 .wx-stepper { display: inline-flex; align-items: center; gap: 2px; color: var(--text); }
 .wx-stepper span { min-width: 44px; text-align: center; }
 .wx-contextbar .wx-btn { display: inline-flex; align-items: center; gap: 5px; }
@@ -382,3 +383,42 @@
 .wx-ms { display: inline-flex; align-items: center; justify-content: center; }
 .wx-ms.off svg { opacity: 1; }
 .wx-track-src { display: inline-flex; justify-content: center; }
+
+/* ================= Edit menu ================= */
+.wx-edit-menu { width: 300px; max-height: 72vh; overflow: auto; margin: -10px; padding: 10px; display: flex; flex-direction: column; gap: 4px; }
+.wx-edit-menu h4 { margin: 10px 0 2px; font-weight: normal; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-dim); border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+.wx-edit-history { display: flex; gap: 6px; }
+.wx-edit-history .wx-btn, .wx-edit-tool { display: inline-flex; align-items: center; gap: 6px; }
+.wx-edit-clip { display: flex; flex-direction: column; }
+.wx-edit-clip-row { display: flex; align-items: center; gap: 4px; height: 26px; }
+.wx-edit-clip-row > span { flex: 1; color: var(--text); cursor: help; }
+.wx-edit-tools { display: flex; flex-direction: column; }
+.wx-edit-tool { height: 26px; padding: 0 6px; background: transparent; border: 0; border-radius: 3px; color: var(--text); text-align: left; cursor: pointer; }
+.wx-edit-tool:hover:not(:disabled) { background: var(--panel-alt); color: var(--accent); }
+.wx-edit-tool:disabled { opacity: 0.4; cursor: default; }
+.wx-edit-hint { margin-left: auto; color: var(--text-dim); font-size: 10px; }
+.wx-edit-feedback { margin-top: 8px; color: var(--amber); }
+.wx-edit-menu .composer-details, .wx-edit-menu .edit-group { margin: 0; }
+
+/* ================= Patterns panel: one column ================= */
+.wx-pats { display: flex; flex-direction: column; }
+.wx-pats-head { display: flex; align-items: center; justify-content: space-between; height: 28px; padding: 0 6px 0 10px; text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; color: var(--text-dim); border-bottom: 1px solid var(--border); }
+.wx-pat-list, .wx-queue { list-style: none; margin: 0; padding: 0; }
+.wx-pat { border-left: 2px solid transparent; }
+.wx-pat.selected { border-left-color: var(--accent); background: var(--panel-alt); }
+.wx-pat-row { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px 0 6px; cursor: default; min-width: 0; }
+.wx-pat:not(.selected) .wx-pat-row:hover { background: var(--panel-alt); }
+.wx-pat-state { width: 12px; color: var(--accent); display: inline-flex; justify-content: center; flex: none; }
+.wx-pat-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wx-pat.selected .wx-pat-name { color: var(--accent); }
+.wx-pat-meta { flex: none; color: var(--text-dim); font-size: 10px; white-space: nowrap; }
+.wx-pat-input { flex: 1; min-width: 0; height: 20px; background: var(--bg); border: 1px solid var(--accent-dim); border-radius: 3px; color: var(--text); padding: 0 4px; }
+.wx-pat-actions { display: flex; align-items: center; gap: 2px; padding: 0 6px 6px 20px; flex-wrap: wrap; }
+.wx-pat-sep { width: 1px; height: 16px; background: var(--border-strong); margin: 0 4px; }
+.wx-queue-item { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 6px 0 10px; border-left: 2px solid transparent; }
+.wx-queue-item.now { border-left-color: var(--amber); background: var(--panel-alt); }
+.wx-queue-item.now .wx-pat-meta { color: var(--amber); }
+.wx-queue-num { width: 14px; color: var(--text-dim); text-align: right; font-variant-numeric: tabular-nums; flex: none; }
+.wx-queue-actions { display: none; flex: none; }
+.wx-queue-item:hover .wx-queue-actions, .wx-queue-item:focus-within .wx-queue-actions { display: inline-flex; }
+.wx-queue-actions .wx-icon-btn { min-width: 20px; height: 20px; }
