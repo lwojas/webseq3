@@ -16,6 +16,8 @@ import { NoteBlock } from "./NoteBlock";
 import { TRACK_EDITOR_COLUMN_PX } from "./timelineConstants";
 
 interface Props {
+  /** Rebuilt UI: only the track-level Arp / LFO / Ties controls; the per-step editing lives in the step graph and piano roll. */
+  modOnly?: boolean;
   /** The selected track, or null when MASTER is selected (it has no sequence). */
   track: Track | null;
   pattern: Pattern;
@@ -64,7 +66,7 @@ function formatPitch(pitch: number, root: number | null, chop = false): string {
 
 /** Menu text for a pitch: in-scale notes get a bullet and their scale degree, so the key is
  * visible at a glance; off-scale notes stay plain. Chromatic (the default) adds nothing. */
-function pitchLabel(pitch: number, root: number | null, slices: number | null, scale: ProjectScale): string {
+export function pitchLabel(pitch: number, root: number | null, slices: number | null, scale: ProjectScale): string {
   const base = formatPitch(pitch, root, slices !== null);
   if (slices !== null || isChromatic(scale)) return base;
   const degree = getScaleDegree(scale, referenceMidi(scale, root) + pitch);
@@ -72,7 +74,7 @@ function pitchLabel(pitch: number, root: number | null, slices: number | null, s
 }
 
 /** Lane label of a chord note: its root, e.g. "A1+2" (root plus the number of added tones). */
-function chordLabel(chord: NoteChord, trackRoot: number | null, scale: ProjectScale): string {
+export function chordLabel(chord: NoteChord, trackRoot: number | null, scale: ProjectScale): string {
   const [rootMidi] = chordMidis(scale, trackRoot, chord);
   const type = chordType(chord.type);
   const inversion = chord.inversion ? ` i${chord.inversion}` : "";
@@ -121,7 +123,7 @@ interface ChordFieldsProps {
 
 /** Chord mode's fields, in the same card as Note mode: the root (scale notes only — a chord is
  * built from the key), how many scale steps it stacks, and what that resolves to right now. */
-function ChordFields({ note, chord, root, scale, onSetNoteChord, onRemoveNote }: ChordFieldsProps) {
+export function ChordFields({ note, chord, root, scale, onSetNoteChord, onRemoveNote }: ChordFieldsProps) {
   const roots = chordRootOptions(scale, root);
   const rootsWithCurrent = roots.some((r) => r.index === chord.root) ? roots : [...roots, { index: chord.root, midi: chordMidis(scale, root, { root: chord.root, degrees: [0] })[0] }].sort((a, b) => a.index - b.index);
   const shapeId = chordTypeId(chord);
@@ -337,6 +339,7 @@ const NoteCard = memo(function NoteCard({
  * so notes sit at the same index as in the timeline. Deliberately no playhead and no transport
  * subscription: this view only re-renders when its props (the track's pattern data) change. */
 export const TrackEditor = memo(function TrackEditor({
+  modOnly,
   track,
   pattern,
   beatsPerBar,
@@ -428,6 +431,7 @@ export const TrackEditor = memo(function TrackEditor({
         onChange={(patch) => onSetTrackEventLfo(track.id, patch)}
         onSetAllSteps={(amount) => onSetTrackNotesLfo(track.id, amount)}
       />
+      {!modOnly && (
       <div className="track-editor-content" style={{ width }}>
         <div className="track-lane te-lane" style={{ width }}>
           <div className="cells" style={{ gridTemplateColumns: columns }}>
@@ -486,6 +490,7 @@ export const TrackEditor = memo(function TrackEditor({
           ))}
         </div>
       </div>
+      )}
     </div>
   );
 });

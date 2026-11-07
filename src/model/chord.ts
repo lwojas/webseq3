@@ -198,11 +198,45 @@ export function chordPitchOffsets(ctx: ProjectScale, trackRoot: number | null, c
  * non-chord note). `voice` is playback-only and never stored. */
 export type PlayedNote = Note & { voice?: number };
 
+/** True when two of `notes` sound at the same time. V1's step grid never allows it on one track, so only
+ * piano-roll material (several notes at once) triggers voice allocation; everything else plays as it always did. */
+export function hasOverlappingNotes(notes: readonly Note[]): boolean {
+  const sorted = [...notes].sort((a, b) => a.start - b.start);
+  let end = -Infinity;
+  for (const n of sorted) {
+    if (n.start < end - 1e-9) return true;
+    end = Math.max(end, n.start + n.duration);
+  }
+  return false;
+}
+
+/** Gives each note the lowest engine voice that is free when it starts (a synth instance is monophonic, so
+ * simultaneous notes need one each). Notes starting together are assigned lowest pitch first. Beyond
+ * MAX_CHORD_VOICES the oldest-ending voice is reused (the engine steals the same way). */
+export function allocateVoices(notes: PlayedNote[]): PlayedNote[] {
+  const order = notes.map((_, i) => i).sort((a, b) => notes[a].start - notes[b].start || (notes[a].pitch ?? 0) - (notes[b].pitch ?? 0));
+  const ends: number[] = [];
+  const out = [...notes];
+  for (const i of order) {
+    const n = notes[i];
+    let v = ends.findIndex((e) => e <= n.start + 1e-9);
+    if (v < 0) {
+      if (ends.length < MAX_CHORD_VOICES) v = ends.length;
+      else v = ends.indexOf(Math.min(...ends));
+    }
+    ends[v] = n.start + n.duration;
+    out[i] = { ...n, voice: v };
+  }
+  return out;
+}
+
 /** Replaces each chord note by its tones as ordinary notes (same start, length, velocity, LFO).
  * A track whose notes have no chords returns its own array untouched. Chop tracks (pitch = slice)
- * never expand: a chord has no meaning there, so such a note plays as a plain note. */
+ * never expand: a chord has no meaning there, so such a note plays as a plain note. When the track's notes
+ * overlap (piano-roll polyphony) the result is also given engine voices (allocateVoices). */
 export function expandChordNotes(track: Track, notes: Note[], scale: Partial<ProjectScale> | null | undefined): PlayedNote[] {
-  if (!notes.some((n) => n.chord)) return notes;
+  const poly = hasOverlappingNotes(notes);
+  if (!poly && !notes.some((n) => n.chord)) return notes;
   const ctx = scaleOf({ scale });
   const chop = effectiveSampleMode(track) === "chop";
   const trackRoot = rootMidiNote(track);
@@ -220,7 +254,7 @@ export function expandChordNotes(track: Track, notes: Note[], scale: Partial<Pro
       out.push({ ...rest, id: `${note.id}#${i}`, ...(offset ? { pitch: offset } : {}), voice: i });
     });
   }
-  return out;
+  return poly ? allocateVoices(out) : out;
 }
 
 /** Chord roots a user can pick on `track`: every scale note whose pitch fits the engine's
@@ -294,15 +328,46 @@ export function setNoteChord(project: Project, patternId: PatternId, noteId: Not
   });
 }
 
-/** How many engine instances a synth track needs to voice its largest chord (1 = no chords). */
+/** How many engine instances a synth track needs to voice its largest chord or its most simultaneous roll notes (1 = neither). */
 export function chordVoicesNeeded(project: Project): Map<string, number> {
   const needed = new Map<string, number>();
   for (const pattern of project.patterns) {
+    const byTrack = new Map<string, Note[]>();
     for (const note of Object.values(pattern.notes)) {
-      const chord = note.chord && normalizeChord(note.chord);
-      if (!chord) continue;
-      needed.set(note.trackId, Math.max(needed.get(note.trackId) ?? 1, chord.degrees.length));
+      const list = byTrack.get(note.trackId);
+      if (list) list.push(note);
+      else byTrack.set(note.trackId, [note]);
+    }
+    for (const [trackId, notes] of byTrack) {
+      const track = project.tracks.find((t) => t.id === trackId);
+      if (!track || !(notes.some((n) => n.chord) || hasOverlappingNotes(notes))) continue;
+      const voices = expandChordNotes(track, [...notes].sort((a, b) => a.start - b.start), project.scale).reduce((m, n) => Math.max(m, (n.voice ?? 0) + 1), 1);
+      if (voices > 1) needed.set(trackId, Math.max(needed.get(trackId) ?? 1, voices));
     }
   }
   return needed;
+}
+
+let explodeCounter = 0;
+
+/** Turns a scale-relative chord note into ordinary notes, one per tone (same start, length, velocity, LFO, ratchet, tie),
+ * exactly the notes playback would have made. The chord no longer follows the project scale afterwards; that is the point of
+ * "Explode": the user can then edit each tone in the piano roll. A plain note, or a chop track, is left alone. */
+export function explodeChord(project: Project, patternId: PatternId, noteId: NoteId): Project {
+  const pattern = project.patterns.find((p) => p.id === patternId);
+  const note = pattern?.notes[noteId];
+  const track = note && project.tracks.find((t) => t.id === note.trackId);
+  if (!pattern || !note || !track || !note.chord || effectiveSampleMode(track) === "chop") return project;
+  const chord = normalizeChord(note.chord);
+  if (!chord) return project;
+  const offsets = chordPitchOffsets(scaleOf(project), rootMidiNote(track), chord);
+  const notes = { ...pattern.notes };
+  delete notes[noteId];
+  const { chord: _c, pitch: _p, ...rest } = note;
+  new Set(offsets).forEach((offset) => {
+    explodeCounter += 1;
+    const id = `note-x${explodeCounter}-${Math.random().toString(36).slice(2, 8)}`;
+    notes[id] = { ...rest, id, ...(offset ? { pitch: offset } : {}) };
+  });
+  return { ...project, patterns: project.patterns.map((p) => (p.id === patternId ? { ...p, notes } : p)) };
 }

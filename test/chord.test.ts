@@ -18,7 +18,7 @@ import { copyTrack, pasteTrack } from "../src/model/edit";
 import { addAsset, addNote, assignAsset, createInitialProject, setNotePitch } from "../src/model/project";
 import { projectReducer } from "../src/model/reducer";
 import { createScale, patchScale, type ProjectScale } from "../src/model/scale";
-import type { Project } from "../src/model/types";
+import type { Note, Project, Track } from "../src/model/types";
 import { mockRuntime } from "./mockRuntime";
 
 const A_PHRYGIAN: ProjectScale = { root: 9, scale: "phrygian", snap: false, preset: null };
@@ -432,5 +432,42 @@ describe("persistence and compatibility", () => {
     const project = withChord(C_MAJOR, "bass", typed("sus4", { inversion: 1, voicing: "open" }));
     const clip = copyTrack(project, "track-1", project.patterns[0].id)!;
     expect(clip.notes[0].chord).toEqual(typed("sus4", { inversion: 1, voicing: "open" }));
+  });
+});
+
+describe("polyphonic voice allocation (piano roll)", () => {
+  const track = { id: "t1", name: "s", assetId: null, fx: [], automation: [], volume: 1, muted: false, soloed: false, instrument: { kind: "pad", params: {} } } as unknown as Track;
+  const n = (id: string, start: number, duration: number, pitch = 0) => ({ id, trackId: "t1", start, duration, velocity: 1, ...(pitch ? { pitch } : {}) }) as Note;
+  it("leaves non-overlapping (V1) notes untouched, same array", () => {
+    const notes = [n("a", 0, 1), n("b", 1, 1), n("c", 2, 1)];
+    expect(expandChordNotes(track, notes, undefined)).toBe(notes);
+  });
+  it("gives simultaneous notes their own voices, lowest pitch first", () => {
+    const out = expandChordNotes(track, [n("a", 0, 4, 7), n("b", 0, 4, 0), n("c", 0, 4, 4)], undefined);
+    const v = Object.fromEntries(out.map((x) => [x.id, x.voice]));
+    expect(v).toEqual({ b: 0, c: 1, a: 2 });
+  });
+  it("reuses a voice once its note has ended", () => {
+    const out = expandChordNotes(track, [n("a", 0, 1, 0), n("b", 0, 4, 4), n("c", 1, 1, 0)], undefined);
+    expect(out.find((x) => x.id === "c")!.voice).toBe(0);
+  });
+});
+
+describe("explodeChord", () => {
+  it("replaces a chord note by its tones as plain notes, matching playback", () => {
+    let project = createInitialProject();
+    const trackId = project.tracks[0].id;
+    project = projectReducer(project, { type: "SET_TRACK_INSTRUMENT", trackId, kind: "pad" });
+    const patternId = project.patterns[0].id;
+    project = projectReducer(project, { type: "ADD_NOTE", patternId, trackId, start: 0 });
+    const noteId = Object.keys(project.patterns[0].notes)[0];
+    project = projectReducer(project, { type: "SET_NOTE_MODE", patternId, noteId, mode: "chord" });
+    const track = project.tracks[0];
+    const played = expandChordNotes(track, Object.values(project.patterns[0].notes), project.scale);
+    const exploded = projectReducer(project, { type: "EXPLODE_CHORD", patternId, noteId });
+    const notes = Object.values(exploded.patterns[0].notes);
+    expect(notes.length).toBe(played.length);
+    expect(notes.every((n) => !n.chord)).toBe(true);
+    expect(notes.map((n) => n.pitch ?? 0).sort((a, b) => a - b)).toEqual(played.map((n) => n.pitch ?? 0).sort((a, b) => a - b));
   });
 });

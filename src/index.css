@@ -928,6 +928,9 @@ select {
   touch-action: none;
 }
 
+.composer-seq .clip-overview { position: absolute; left: 0; bottom: 1px; pointer-events: none; }
+.composer-seq .composer-seq-name { position: relative; align-self: flex-start; margin-top: 2px; font-size: 11px; }
+
 .composer-seq.selected {
   outline: 2px solid var(--text);
   outline-offset: 1px;

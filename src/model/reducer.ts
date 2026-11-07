@@ -4,6 +4,7 @@ import type { CopiedTrackConfig } from "./trackConfig";
 import type { Asset } from "./types";
 import * as project from "./project";
 import * as composer from "./composer";
+import * as roll from "./roll";
 import * as fx from "./fx";
 import * as instruments from "./instruments";
 import * as eventLfo from "./eventLfo";
@@ -15,7 +16,7 @@ import * as trackConfig from "./trackConfig";
 import * as edit from "./edit";
 import { setTrackArp, type ArpVelocity, type TrackArp } from "./arp";
 import { snapAddedNoteToScale } from "./scaleEntry";
-import { setNoteChord, setNoteMode, type NoteChord } from "./chord";
+import { explodeChord, setNoteChord, setNoteMode, type NoteChord } from "./chord";
 import { applyRecipe } from "../guide/apply";
 import type { Recipe } from "../guide/recipes";
 import { setProjectScale, type ProjectScale } from "./scale";
@@ -60,6 +61,7 @@ export type Action =
   | { type: "SET_NOTE_PITCH"; patternId: PatternId; noteId: NoteId; pitch: number }
   | { type: "SET_NOTE_MODE"; patternId: PatternId; noteId: NoteId; mode: "note" | "chord" }
   | { type: "SET_NOTE_CHORD"; patternId: PatternId; noteId: NoteId; patch: Partial<NoteChord> }
+  | { type: "EXPLODE_CHORD"; patternId: PatternId; noteId: NoteId }
   | { type: "SET_NOTE_TIE"; patternId: PatternId; noteId: NoteId; tie: boolean }
   | { type: "SET_TRACK_NOTES_TIE"; patternId: PatternId; trackId: TrackId; tie: boolean }
   | { type: "SET_NOTE_RATCHET"; patternId: PatternId; noteId: NoteId; ratchet: number }
@@ -119,6 +121,16 @@ export type Action =
   | { type: "CLEAR_AUTOMATION_LANE"; target: FxTarget; fxId: FxId | null; parameter: string; patternId?: PatternId }
   | { type: "RESET_PATTERN_AUTOMATION"; patternId: PatternId; target: FxTarget }
   | { type: "REPLACE_AUTOMATION_RANGE"; target: FxTarget; fxId: FxId | null; parameter: string; from: number; to: number; events: AutomationEvent[]; patternId?: PatternId }
+  // Piano roll (model/roll.ts): pitch-aware note edits, several notes at once.
+  | { type: "ROLL_ADD_NOTE"; patternId: PatternId; trackId: TrackId; start: number; pitch: number; duration: number; velocity?: number; resolution?: number }
+  | { type: "ROLL_MOVE_NOTES"; patternId: PatternId; noteIds: NoteId[]; dStart: number; dPitch: number; resolution?: number }
+  | { type: "ROLL_RESIZE_NOTE"; patternId: PatternId; noteId: NoteId; duration: number; resolution?: number }
+  | { type: "ROLL_REMOVE_NOTES"; patternId: PatternId; noteIds: NoteId[] }
+  | { type: "ROLL_SET_VELOCITY"; patternId: PatternId; noteIds: NoteId[]; velocity: number }
+  | { type: "ROLL_DUPLICATE_NOTES"; patternId: PatternId; noteIds: NoteId[]; dStart: number }
+  | { type: "ROLL_PASTE_NOTES"; patternId: PatternId; trackId: TrackId; notes: roll.CopiedRollNote[]; at: number; resolution?: number }
+  // Several actions as ONE undo step (a step-level graph edit touches every note of the step).
+  | { type: "BATCH"; actions: Action[] }
   | { type: "LOAD_PROJECT"; project: Project };
 
 /** After a track's source changes, drops source automation lanes the new source can't honour. */
@@ -329,6 +341,24 @@ export function projectReducer(state: Project, action: Action): Project {
       return automation.clearAutomationLane(state, action.target, action.fxId, action.parameter, action.patternId);
     case "RESET_PATTERN_AUTOMATION":
       return patternAutomation.clearPatternAutomation(state, action.patternId, action.target);
+    case "EXPLODE_CHORD":
+      return explodeChord(state, action.patternId, action.noteId);
+    case "ROLL_ADD_NOTE":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollAddNote(p, state.beatsPerBar, action.trackId, action.start, action.pitch, action.duration, action.velocity, action.resolution));
+    case "ROLL_MOVE_NOTES":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollMoveNotes(p, state.beatsPerBar, action.noteIds, action.dStart, action.dPitch, action.resolution));
+    case "ROLL_RESIZE_NOTE":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollResizeNote(p, state.beatsPerBar, action.noteId, action.duration, action.resolution));
+    case "ROLL_REMOVE_NOTES":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollRemoveNotes(p, action.noteIds));
+    case "ROLL_SET_VELOCITY":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollSetVelocity(p, action.noteIds, action.velocity));
+    case "ROLL_DUPLICATE_NOTES":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollDuplicateNotes(p, state.beatsPerBar, action.noteIds, action.dStart).pattern);
+    case "ROLL_PASTE_NOTES":
+      return project.updatePattern(state, action.patternId, (p) => roll.rollPasteNotes(p, state.beatsPerBar, action.trackId, action.notes, action.at, action.resolution).pattern);
+    case "BATCH":
+      return action.actions.reduce<Project>((acc, a) => projectReducer(acc, a), state);
     case "LOAD_PROJECT":
       return composer.migrateComposer(action.project); // a project saved by the single-timeline Composer gets a lane
   }

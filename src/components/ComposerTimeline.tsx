@@ -6,6 +6,9 @@ import { AutomationLane } from "./AutomationLane";
 import type { AutomationRowProps } from "./AutomationRow";
 import { ComposerTrackList, type ComposerTrackListProps } from "./ComposerTrackList";
 import { RafText } from "./RafText";
+import { LaneTracks } from "../ui/arrange/LaneTracks";
+import { ClipOverview } from "../ui/arrange/ClipOverview";
+import { sequencesOfPattern } from "../model/composer";
 
 /** Pixels per bar at 100% zoom. */
 export const COMPOSER_BAR_PX = 96;
@@ -62,6 +65,8 @@ export interface ComposerToolbarProps {
 }
 
 interface Props {
+  /** Rebuilt UI: lanes can be expanded into one row per track (ui/arrange/LaneTracks.tsx). */
+  expandableLanes?: boolean;
   project: Project;
   /** Where the viewport's horizontal scroll is remembered. The view is unmounted while the Sequencer shows (it takes
    * the grid's place), so the owner keeps this across the trip and the view restores it. */
@@ -105,6 +110,7 @@ interface Props {
  * block moves it (along its lane, or onto another lane), dragging its right edge resizes it; a drop that would overlap
  * on the lane shows red and is discarded (nothing is ever pushed aside). Pointer events, so it works by touch. */
 export function ComposerTimeline({
+  expandableLanes = false,
   project,
   scrollMemory,
   getSongBeat,
@@ -127,6 +133,8 @@ export function ComposerTimeline({
 }: Props) {
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
+  const [expanded, setExpanded] = useState<Set<LaneId>>(() => new Set());
+  const toggleExpanded = (id: LaneId) => setExpanded((cur) => { const next = new Set(cur); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   const lanes = composerLanes(project);
   const bpb = project.beatsPerBar;
   const [zoomIndex, setZoomIndex] = useState(loadZoomIndex);
@@ -269,6 +277,11 @@ export function ComposerTimeline({
               <Fragment key={lane.id}>
                 <div className={`composer-lane ${laneSelected ? "selected" : ""}`} data-lane-id={lane.id}>
                   <div className="composer-lane-header" onPointerDown={() => onSelectLane(lane.id)}>
+                    {expandableLanes && (
+                      <button className="composer-lane-btn wx-lane-expand" aria-expanded={expanded.has(lane.id)} aria-label={`${expanded.has(lane.id) ? "Collapse" : "Expand"} ${lane.name} into tracks`} title="Show the tracks inside this lane's clips" onClick={() => toggleExpanded(lane.id)}>
+                        {expanded.has(lane.id) ? "▾" : "▸"} tracks
+                      </button>
+                    )}
                     <input
                       className="composer-lane-name"
                       value={lane.name}
@@ -310,12 +323,14 @@ export function ComposerTimeline({
                           title={`${sequenceName(project, seq)} — bar ${seq.start + 1}, ${bars} bar${bars === 1 ? "" : "s"}`}
                           onPointerDown={(e) => beginDrag(e, seq.id, lane.id, "move")}
                           onFocus={() => onSelectSequence(seq.id)}
+                          onDoubleClick={() => toolbar.onEdit()}
                           onKeyDown={(e) => {
                             if (e.key === "Enter") toolbar.onEdit();
                             else if (e.key === "Delete" || e.key === "Backspace") toolbar.onDelete();
                           }}
                         >
-                          <span className="composer-seq-name">{sequenceName(project, seq)}</span>
+                          <ClipOverview pattern={project.patterns.find((p) => p.id === seq.patternId)!} tracks={project.tracks} beatsPerBar={project.beatsPerBar} widthPx={Math.max(1, bars * barPx - 2)} />
+                          <span className="composer-seq-name">{sequenceName(project, seq)}{sequencesOfPattern(project, seq.patternId).length > 1 ? ` ⛓×${sequencesOfPattern(project, seq.patternId).length}` : ""}</span>
                           <span className="composer-seq-handle" aria-hidden="true" onPointerDown={(e) => beginDrag(e, seq.id, lane.id, "resize")} />
                         </div>
                       );
@@ -328,6 +343,9 @@ export function ComposerTimeline({
                     )}
                   </div>
                 </div>
+                {expandableLanes && expanded.has(lane.id) && (
+                  <LaneTracks project={project} lane={lane} barPx={barPx} trackWidth={trackWidth} insetPx={COMPOSER_INSET_PX} selectedTarget={trackList.selectedTarget} onSelectTarget={trackList.onSelectTarget} onSetMuted={trackList.onSetMuted} onSetSoloed={trackList.onSetSoloed} />
+                )}
               </Fragment>
             );
           })}
