@@ -77,7 +77,7 @@ const StepRow = memo(function StepRow(p: RowProps) {
       return;
     }
     const cell = cells.get(col);
-    if (cell?.kind === "single" && noteId) {
+    if (cell && cell.kind !== "tail" && cell.notes.length === 1 && noteId) {
       e.currentTarget.setPointerCapture(e.pointerId);
       drag.current = { kind: "move", noteId, start: cell.notes[0].start, x0: e.clientX, el: target.closest<HTMLElement>(".wx-pad") ?? target, startNew: cell.notes[0].start, moved: false };
       return;
@@ -158,7 +158,7 @@ const StepRow = memo(function StepRow(p: RowProps) {
             ))}
           </span>
         )}
-        {cell.kind === "single" && <span className="wx-resize" data-note={note.id} data-hit="resize" style={{ width: HANDLE_PX }} />}
+        {cell.notes.length === 1 && <span className="wx-resize" data-note={note.id} data-hit="resize" style={{ width: HANDLE_PX }} />}
       </div>,
     );
   }
