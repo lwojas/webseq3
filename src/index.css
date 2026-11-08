@@ -56,52 +56,6 @@ select {
 
 /* --- top bar --- */
 
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* No vertical padding: the page tabs at the right span the whole row, so their underline sits on
-     the row's bottom border instead of floating mid-row. */
-  padding: 0 16px;
-  min-height: 36px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-  letter-spacing: 0.04em;
-}
-
-.topbar .brand {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.topbar .subtitle {
-  color: var(--text-dim);
-  margin-left: 8px;
-}
-
-.project-name-input {
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid transparent;
-  color: var(--text);
-  margin-left: 10px;
-  padding: 2px 4px;
-  font-size: 12px;
-  width: 14em;
-}
-
-.project-name-input:hover,
-.project-name-input:focus {
-  border-bottom-color: var(--border-strong);
-  outline: none;
-}
-
-.project-controls {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .save-status {
   font-size: 10px;
   letter-spacing: 0.05em;
@@ -118,35 +72,6 @@ select {
 
 /* Startup crash-recovery prompt (App.tsx, persistence/recovery.ts) — webtracker's amber-bordered
    banner above the chrome. */
-.recovery-banner {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 12px;
-  padding: 6px 12px;
-  background: var(--panel-alt);
-  border-bottom: 1px solid var(--amber);
-  color: var(--text);
-  font-size: 12px;
-}
-
-.recovery-banner-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.project-select {
-  background: var(--panel-alt);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  padding: 3px 6px;
-  color: var(--text);
-  font-size: 11px;
-  max-width: 12em;
-}
 
 /* --- transport --- */
 
@@ -353,34 +278,6 @@ select {
   overflow: hidden;
 }
 
-.pattern-strip-name {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 12em;
-  max-width: 18em;
-  background: var(--panel-alt);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  color: var(--text);
-  padding: 4px 10px;
-  font-size: 11px;
-  cursor: pointer;
-}
-
-.pattern-strip-name.open {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.pattern-strip-name-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .pattern-step:disabled,
 .bars-stepper .btn:disabled {
   opacity: 0.4;
@@ -477,98 +374,10 @@ select {
 /* The pattern list, shown INSTEAD of the timeline (see the data-takeover rules at the end of this
    file) — a view, not an overlay. Mounted only while open. The list scrolls inside this fixed
    region; the footer with the rare / destructive actions stays pinned. */
-.pattern-picker {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  background: var(--panel);
-}
-
-.pattern-picker-title {
-  flex-shrink: 0;
-  padding: 10px 12px 0;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-}
-
-.pattern-picker-count {
-  color: var(--amber);
-  margin-left: 6px;
-}
-
-.pattern-picker-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 8px;
-  align-content: start;
-  padding: 10px 12px;
-}
-
-.pattern-picker-chip {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: var(--panel-alt);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  color: var(--text);
-  padding: 8px 10px;
-  text-align: left;
-  cursor: pointer;
-  font-size: 11px;
-  min-width: 0;
-}
-
-.pattern-picker-chip-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pattern-picker-chip-meta {
-  color: var(--text-dim);
-  font-size: 10px;
-}
-
-.pattern-picker-chip.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: #eafffa;
-}
-
-.pattern-picker-chip.active .pattern-picker-chip-meta {
-  color: #eafffa;
-}
-
-.pattern-picker-chip.playing {
-  border-color: var(--amber);
-}
-
-.pattern-picker-footer {
-  flex-shrink: 0;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  background: var(--panel-alt);
-  border-top: 1px solid var(--border);
-}
 
 /* Visualizes Transport's playing pattern, independent of .active (the editing selection) -- a
    row can be selected and/or playing at once. Shared with the Patterns view's rows so the same
    "playing" cue reads identically everywhere it appears. */
-.pattern-list-row.playing,
-.queue-row.playing {
-  border-color: var(--amber);
-  box-shadow: 0 0 4px rgba(240, 168, 60, 0.4);
-}
 
 .pattern-name-input {
   background: var(--panel-alt);
@@ -601,111 +410,21 @@ select {
    it's styled as a physical segmented-control / hardware mode toggle instead: a pill-shaped
    track with the active side filled solid, rather than an underline on a flat strip (ECS-151;
    both views stay mounted, this only flips which is visible). */
-.topbar-right {
-  display: flex;
-  align-items: center;
-  align-self: stretch;
-  gap: 16px;
-}
 
 /* The page-level tabs (Sequencer / Patterns): plain underlined tabs, the same visual language as
    every other tab strip in the app (.side-panel-tab, .bottom-panel-tab). */
-.top-tabs {
-  display: flex;
-  align-self: stretch;
-  flex-shrink: 0;
-}
-
-.top-tab {
-  background: transparent;
-  border: none;
-  color: var(--text-dim);
-  padding: 0 14px;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-}
-
-.top-tab:hover {
-  color: var(--text);
-}
-
-.top-tab.active {
-  color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
 
 /* --- patterns view (pattern library | queue, two columns) --- */
 
 /* Always mounted (see App.tsx's MainView doc comment) -- hidden by default, shown only under
    .app[data-main-view="patterns"] below, the same display-toggle mechanism data-mobile-tab
    already uses for its own sections. */
-.patterns-view {
-  flex: 1;
-  min-height: 0;
-  display: none;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.patterns-columns {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
 
 /* Says the two roles once, in words: EDITING is the pattern open in the timeline, PLAYING is what
    the transport is sounding. They can differ. */
-.patterns-header {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px 24px;
-  flex-shrink: 0;
-  padding: 10px 16px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
-
-.patterns-header-role {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.patterns-header-idle {
-  color: var(--text-dim);
-}
-
-.patterns-header-actions {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.patterns-header-edit {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.patterns-header-edit:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.patterns-header-back {
-  color: var(--text-dim);
-}
 
 .app[data-main-view="patterns"] .workspace {
   display: none;
-}
-
-.app[data-main-view="patterns"] .patterns-view {
-  display: flex;
 }
 
 /* The pattern strip edits the sequencer's current pattern -- not relevant once the Patterns view's
@@ -1326,208 +1045,7 @@ select {
   }
 }
 
-.pattern-list-column,
-.pattern-queue-column {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  padding: 10px 12px;
-  gap: 8px;
-}
-
-.pattern-list-column {
-  border-right: 1px solid var(--border);
-}
-
-.pattern-list-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-shrink: 0;
-}
-
-.pattern-list,
-.pattern-queue {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.pattern-list-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--panel-alt);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-
-.pattern-list-row.active {
-  border-color: var(--accent);
-}
-
-.pattern-list-tags {
-  display: flex;
-  gap: 4px;
-  width: 132px;
-  flex-shrink: 0;
-}
-
 /* EDITING / PLAYING in words, not just border colours. */
-.status-tag {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  padding: 1px 6px;
-  border-radius: 3px;
-  white-space: nowrap;
-}
-
-.status-tag.editing {
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
-  color: #eafffa;
-}
-
-.status-tag.playing {
-  background: rgba(240, 168, 60, 0.15);
-  border: 1px solid var(--amber);
-  color: var(--amber);
-}
-
-.pattern-list-name-text,
-.pattern-list-row .pattern-list-name {
-  flex: 1;
-  min-width: 0;
-  width: auto;
-}
-
-.pattern-list-name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 12px;
-}
-
-.pattern-list-name-text.strong {
-  font-weight: 700;
-}
-
-.pattern-list-meta {
-  color: var(--text-dim);
-  font-size: 10px;
-  min-width: 8em;
-  flex-shrink: 0;
-}
-
-.pattern-list-bars {
-  flex-shrink: 0;
-}
-
-.pattern-list-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.pattern-edit-btn {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-.row-menu-wrap {
-  position: relative;
-}
-
-.row-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 4px;
-  z-index: 5;
-  min-width: 150px;
-  display: flex;
-  flex-direction: column;
-  background: var(--panel);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-}
-
-.row-menu button {
-  background: transparent;
-  border: none;
-  color: var(--text);
-  text-align: left;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-.row-menu button:hover:not(:disabled) {
-  background: var(--panel-alt);
-}
-
-.row-menu button.danger {
-  color: var(--danger);
-}
-
-.row-menu button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.queue-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--panel-alt);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  padding: 6px 8px;
-}
-
-.queue-row-position {
-  color: var(--text-dim);
-  font-size: 10px;
-  flex-shrink: 0;
-  width: 1.5em;
-  text-align: right;
-}
-
-.queue-row-name {
-  flex: 1;
-  min-width: 0;
-  font-size: 11px;
-}
-
-.queue-row-tag {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.queue-row-tag.playing {
-  color: var(--amber);
-}
-
-.queue-row-tag.next {
-  color: var(--accent);
-}
-
-.queue-row-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
 
 /* --- workspace (side panel + main content) --- */
 
@@ -1550,45 +1068,6 @@ select {
   border-right: 1px solid var(--border);
   overflow: hidden;
   contain: layout paint;
-}
-
-.side-panel-tabs {
-  display: flex;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.side-panel-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-dim);
-  padding: 8px 10px;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-}
-
-.side-panel-tab:last-child {
-  border-right: none;
-}
-
-.side-panel-tab:hover {
-  color: var(--text);
-}
-
-.side-panel-tab.active {
-  background: var(--panel-alt);
-  color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
-
-.side-panel-content {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
 }
 
 /* --- assets panel (lives inside .side-panel) --- */
@@ -1861,10 +1340,6 @@ select {
 /* Desktop: the four bank tabs live in the grid header's track-column corner (SequencerGrid's
    bankPlacement="corner") instead of a row of their own. A fixed 4-item control, so it sits with
    the tracks it selects and the pattern strip doesn't share a row with it. */
-.grid-header .track-col-label.track-col-banks {
-  padding: 0;
-  display: flex;
-}
 
 .bank-bar-corner {
   flex: 1;
@@ -1914,74 +1389,11 @@ select {
 
 /* The grid's own bounded scroll region: it fills the width it is given (no fixed bar cap) and
    scrolls horizontally for a pattern wider than the view, vertically for more tracks than fit. */
-.timeline-scroll {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-}
-
-.timeline-content {
-  position: relative;
-  width: max-content;
-  min-width: 100%;
-}
 
 /* Past the last step of a pattern shorter than the screen: an explicit "end of pattern" zone, so
    the empty space reads as the end of the pattern, not as more of it. Static (no per-frame cost);
    --content-width is the pattern's pixel width, set by SequencerGrid. Zero-width when the pattern
    is wider than the view. */
-.timeline-content::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: calc(var(--header-width) + var(--content-width, 0px));
-  right: 0;
-  background: rgba(255, 255, 255, 0.02);
-  border-left: 1px solid var(--border-strong);
-  pointer-events: none;
-}
-
-.grid-header {
-  display: flex;
-  border-bottom: 1px solid var(--border-strong);
-  background: var(--panel);
-  position: sticky;
-  top: 0;
-  z-index: 2;
-}
-
-.grid-header .track-col-label {
-  width: var(--header-width);
-  flex-shrink: 0;
-  padding: 6px 10px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-}
-
-.grid-header .beat-ruler {
-  display: grid;
-  grid-auto-flow: column;
-}
-
-.grid-header .beat-num {
-  text-align: center;
-  color: var(--text-dim);
-  font-size: 9px;
-  padding: 6px 0;
-  border-left: 1px solid var(--border);
-}
-
-.grid-header .beat-num.bar-start {
-  border-left: 1px solid var(--border-strong);
-  color: var(--accent);
-}
-
-.track-rows {
-  position: relative;
-}
 
 .track-row {
   display: flex;
@@ -2025,54 +1437,9 @@ select {
 
 /* Per-row mute/solo (same state as the Mixer's M/S — both read Track.muted/soloed). Active
    colors match .mixer-mute/.mixer-solo below. Hidden on phones (see the 768px block). */
-.track-header .track-notes,
-.track-header .track-mute,
-.track-header .track-solo {
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--text-dim);
-  border-radius: 2px;
-  padding: 2px 6px;
-  cursor: pointer;
-  font-size: 9px;
-  flex-shrink: 0;
-}
-
-.track-header .track-notes:hover,
-.track-header .track-mute:hover,
-.track-header .track-solo:hover {
-  color: var(--accent);
-  border-color: var(--accent-dim);
-}
 
 /* Manual trigger (ECS-83) — same treatment as .track-mute, shown only on the selected track's
    header. "active" marks a sounding loop (the same accent the .btn.active family uses). */
-.track-header .track-trigger {
-  background: transparent;
-  border: 1px solid var(--border-strong);
-  color: var(--text-dim);
-  border-radius: 2px;
-  padding: 2px 6px;
-  cursor: pointer;
-  font-size: 9px;
-  flex-shrink: 0;
-}
-
-.track-header .track-trigger:hover:not(:disabled) {
-  color: var(--accent);
-  border-color: var(--accent-dim);
-}
-
-.track-header .track-trigger.active {
-  background: var(--accent-dim);
-  border-color: var(--accent);
-  color: #eafffa;
-}
-
-.track-header .track-trigger:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
 
 .track-lane {
   position: relative;
@@ -2084,18 +1451,6 @@ select {
   inset: 0;
   display: grid;
   grid-auto-flow: column;
-}
-
-.master-row {
-  cursor: pointer;
-}
-
-.master-row .track-header {
-  cursor: pointer;
-}
-
-.master-lane {
-  background: rgba(240, 168, 60, 0.03);
 }
 
 .track-name.master-name {
@@ -2113,26 +1468,6 @@ select {
 
 /* Phone only (shown in the 768px block): the M/S buttons are hidden there, but a muted/soloed
    track still reads at a glance. */
-.track-state-tag {
-  display: none;
-  font-size: 9px;
-  font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-.track-state-tag.muted {
-  background: rgba(240, 168, 60, 0.15);
-  border: 1px solid var(--amber);
-  color: var(--amber);
-}
-
-.track-state-tag.soloed {
-  background: var(--accent-dim);
-  border: 1px solid var(--accent);
-  color: #eafffa;
-}
 
 /* A muted track: dimmed name and lane (opacity only — no repaint-heavy effects on the rows). */
 .track-row.muted .track-header .track-name {
@@ -2210,14 +1545,6 @@ select {
   touch-action: none;
 }
 
-.playhead-wrapper {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: var(--header-width);
-  pointer-events: none;
-}
-
 .playhead {
   position: absolute;
   top: 0;
@@ -2241,21 +1568,6 @@ select {
   }
 }
 
-.grid-body {
-  position: relative;
-  display: flex;
-}
-
-.grid-body .track-col-spacer {
-  width: var(--header-width);
-  flex-shrink: 0;
-}
-
-.grid-body .lanes {
-  flex: 1;
-  position: relative;
-}
-
 /* --- bottom panel (FX / Mixer tab switch, below the timeline) --- */
 
 /* A fixed-height sibling of .sequencer inside .main (see .main's doc comment) — its own
@@ -2271,35 +1583,6 @@ select {
   flex-direction: column;
   min-height: 0;
   border-top: 1px solid var(--border);
-}
-
-.bottom-panel-tabs {
-  flex-shrink: 0;
-  display: flex;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
-
-.bottom-panel-tab {
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-dim);
-  padding: 6px 16px;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-}
-
-.bottom-panel-tab:hover {
-  color: var(--text);
-}
-
-.bottom-panel-tab.active {
-  background: var(--panel-alt);
-  color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
 }
 
 /* --- FX panel (contextual: selected track or MASTER) --- */
@@ -2589,14 +1872,6 @@ select {
 
 .module-param .param-label.automated {
   color: var(--amber);
-}
-
-.automation-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 4px var(--amber);
 }
 
 /* --- automation lane --- */
@@ -2955,17 +2230,14 @@ select {
   gap: 4px;
 }
 
-.mixer-mute.active,
-.track-header .track-mute.active {
+.mixer-mute.active {
   background: #6b2323;
   border-color: var(--danger);
   color: #ffe4e4;
 }
 
 /* .track-notes.active: notes switched off in this pattern (Pattern.offTracks) — a per-pattern MIDI mute, separate from M. */
-.mixer-solo.active,
-.track-header .track-solo.active,
-.track-header .track-notes.active {
+.mixer-solo.active {
   background: #6b5323;
   border-color: var(--amber);
   color: #ffe9c4;
@@ -3494,25 +2766,6 @@ select {
 
 /* --- empty state --- */
 
-.gesture-veil {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 13, 18, 0.92);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10;
-}
-
-.gesture-veil .card {
-  text-align: center;
-}
-
-.gesture-veil .btn {
-  padding: 12px 28px;
-  font-size: 13px;
-}
-
 .hidden-input {
   display: none;
 }
@@ -3535,42 +2788,20 @@ select {
      out, rather than shrinking anything — see NoteBlock.tsx's doc comment for the resize handle
      specifically. */
 
-.mobile-tabbar {
-  display: none;
-}
-
 @media (max-width: 768px) {
   /* Phone track header: the M/S BUTTONS are hidden (they're in the Track tab header and the Mixer),
      but the STATE stays visible as an M / S tag, so the name gets the room instead (~9 characters)
      and a muted track still reads at a glance. */
-  .track-header .track-mute,
-  .track-header .track-solo,
   .track-header .track-source-tag,
   .track-header .track-fx-badge {
     display: none;
   }
 
-  .track-state-tag {
-    display: inline-block;
-  }
-
-  .pattern-picker-list {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   /* The Track tab's sub-tabs (Inst / FX / Notes / Edit) share the full width, like the tab bar. */
-  .bottom-panel-tab {
-    flex: 1;
-    padding: 12px 4px;
-  }
 
   /* The Track tab header already names the track, so its panels drop their own title line. */
   .app[data-mobile-tab="track"] .fx-panel-title {
     display: none;
-  }
-
-  .project-controls {
-    flex-wrap: wrap;
   }
 
   .pattern-name-input {
@@ -3581,22 +2812,15 @@ select {
     --header-width: 132px;
   }
 
-  .workspace,
-  .patterns-view {
+  .workspace {
     flex-direction: column;
-  }
-
-  .side-panel-tabs,
-  .top-tabs {
-    display: none;
   }
 
   .side-panel,
   .main,
   .sequencer,
   .composer,
-  .bottom-panel,
-  .patterns-view {
+  .bottom-panel {
     display: none;
   }
 
@@ -3636,11 +2860,6 @@ select {
     border-right: none;
   }
 
-  .app[data-mobile-tab="library"][data-library-view="patterns"] .patterns-view {
-    display: flex;
-    flex: 1;
-  }
-
   /* The Patterns sub-tab is not in the workspace, so the (then empty) workspace must not keep
      claiming its share of the height. */
   .app[data-mobile-tab="library"][data-library-view="patterns"] .workspace {
@@ -3648,74 +2867,9 @@ select {
   }
 
   /* Stacked on a phone: the page scrolls as one instead of splitting the height between two columns. */
-  .patterns-columns {
-    flex-direction: column;
-    overflow-y: auto;
-  }
-
-  .pattern-list-column,
-  .pattern-queue-column {
-    flex: none;
-    overflow: visible;
-  }
-
-  .pattern-list-column {
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .patterns-header-back {
-    display: none;
-  }
-
-  .pattern-list-tags {
-    width: auto;
-    min-width: 0;
-  }
-
-  .pattern-list-meta {
-    display: none;
-  }
 
   /* Same overflow strategy as .pattern-edit-fields above: wrap onto a second line rather than
      let flex:1/min-width:0 crush the name input down to a few unreadable characters. */
-  .pattern-list-row {
-    flex-wrap: wrap;
-    row-gap: 6px;
-  }
-
-  .pattern-list-row .pattern-name-input {
-    flex-basis: 100%;
-  }
-
-  .mobile-tabbar {
-    display: flex;
-    flex-shrink: 0;
-    border-top: 1px solid var(--border);
-    background: var(--panel);
-    /* Clears the Android gesture/nav bar when the page is edge-to-edge (viewport-fit=cover,
-       see index.html); 0 where there is no inset. */
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .mobile-tab {
-    flex: 1;
-    min-width: 0;
-    min-height: 48px;
-    background: transparent;
-    border: none;
-    border-right: 1px solid var(--border);
-    color: var(--text-dim);
-    padding: 10px 4px;
-    cursor: pointer;
-    text-transform: uppercase;
-    font-size: 10px;
-    letter-spacing: 0.05em;
-  }
-
-  .mobile-tab:last-child {
-    border-right: none;
-  }
 
   /* Mixer: four channel strips fill the width with a sliver of the fifth showing (the cue to
      scroll), the strips take the full panel height, and the fader uses all of it instead of the
@@ -3740,11 +2894,6 @@ select {
     --fader-track-h: 16px;
     --fader-thumb-w: 44px;
     --fader-thumb-h: 32px;
-  }
-
-  .mobile-tab.active {
-    color: var(--accent);
-    box-shadow: inset 0 2px 0 var(--accent);
   }
 }
 
@@ -3779,18 +2928,6 @@ select {
     padding: 8px 6px;
   }
 
-  .pattern-list-row,
-  .queue-row {
-    padding: 10px 8px;
-  }
-
-  .track-header .track-notes,
-  .track-header .track-mute,
-  .track-header .track-solo,
-  .track-header .track-trigger {
-    padding: 7px 9px;
-  }
-
   .fx-chip-label {
     padding: 9px 12px;
   }
@@ -3810,11 +2947,7 @@ select {
     padding: 9px 12px;
   }
 
-  .side-panel-tab,
-  .top-tab,
-  .bottom-panel-tab,
-  .bank-tab,
-  .mobile-tab {
+  .bank-tab {
     padding: 12px 2px;
   }
 
@@ -4097,89 +3230,8 @@ select {
 /* --- Phone chrome: top bar, settings view, library tabs, Track tab header --- */
 
 /* One fixed 44px row that never wraps, whatever the pattern count. */
-.mobile-topbar {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 44px;
-  flex-shrink: 0;
-  padding: 0 4px;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
-
-.mobile-topbar .btn,
-.mobile-topbar .pattern-strip-name {
-  height: 36px;
-  padding: 0 8px;
-}
-
-.mobile-topbar .pattern-strip-name {
-  flex: 1;
-  min-width: 0;
-}
-
-.mobile-topbar-play {
-  width: 40px;
-  padding: 0;
-}
-
-.mobile-topbar-chip {
-  min-width: 40px;
-  font-variant-numeric: tabular-nums;
-}
-
-.library-tabs {
-  display: flex;
-  flex-shrink: 0;
-  background: var(--panel);
-  border-bottom: 1px solid var(--border);
-}
-
-.library-tab {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-dim);
-  padding: 12px 4px;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.05em;
-}
-
-.library-tab:last-child {
-  border-right: none;
-}
-
-.library-tab.active {
-  background: var(--panel-alt);
-  color: var(--accent);
-  box-shadow: inset 0 -2px 0 var(--accent);
-}
 
 /* The ⋯ view: rare controls only, in a fixed region that scrolls inside itself. */
-.settings-view {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 12px;
-  background: var(--panel);
-}
-
-.settings-project-name {
-  flex: 1;
-  margin-left: 0;
-  width: auto;
-  background: var(--panel-alt);
-  border: 1px solid var(--border-strong);
-  border-radius: 3px;
-  padding: 6px 8px;
-}
 
 .transport.transport-settings {
   flex-direction: column;
@@ -4203,44 +3255,10 @@ select {
   border-bottom: 1px solid var(--border);
 }
 
-.track-head-label {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  color: var(--text);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.track-head-step:disabled,
-.track-head-toggle:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.track-head-play {
-  width: 40px;
-  height: 36px;
-  padding: 0;
-}
-
 @media (pointer: coarse) {
-  .pattern-picker-chip {
-    padding: 10px;
-  }
 
   .track-head .btn.small {
     padding: 9px 12px;
-  }
-
-  .pattern-strip-name {
-    padding: 8px 10px;
-  }
-
-  .row-menu button {
-    padding: 12px;
   }
 }
 
@@ -5000,7 +4018,6 @@ option.out-of-scale {
   color: var(--amber);
   margin-left: 6px;
 }
-
 
 .eq-fields {
   display: flex;

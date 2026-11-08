@@ -70,7 +70,7 @@ src/styles/            tokens.css (V1 tokens), kit.css, then one css per area (n
 
 ## Status (end of first implementation session)
 
-The new UI is the default (`npm run dev` → `http://localhost:5174/`); V1 is at `?ui=1`. `tsc` clean, 56 test files / 835 tests green.
+The new UI is the only UI (`npm run dev` → `http://localhost:5174/`). `tsc` clean, 56 test files / 835 tests green.
 
 | Step | State |
 |---|---|
@@ -84,7 +84,7 @@ The new UI is the default (`npm run dev` → `http://localhost:5174/`); V1 is at
 | 8 mixer | ◐ V1 MixerPanel wrapped |
 | 9 device area / library | ◐ V1 panels wrapped (Instrument, FX & Route, Mod & Notes; Assets, Patterns+queue, MIDI, Edit, Guide) |
 | 10 shortcuts registry (`src/ui/shortcuts.tsx`, `?` cheat-sheet) ☑; perf check ☑: 5 s of playback with step lane + roll open = 0 DOM changes besides the playhead/readout, 0 long tasks (headless Chromium, MutationObserver + longtask observer); compact/phone layout ☑ (≤768px: Pattern · Arrange · Mixer · Track · Library tabs, ⋯ for project/tempo; checked at 390×844, no horizontal overflow); a11y pass ☐ | ◐ |
-| 11 delete V1 UI | ☐ |
+| 11 delete V1 UI | ☑ 18 source files (App, old layout chrome, step grid, track row, pattern list/queue/picker, project bar…) and their 2 unit tests; controller trimmed (6 dead handlers, V1 prop builders, 101 unused exports); 153 unreachable CSS rules pruned (5028 → 4045 lines), verified by pixel-identical screenshots of 59 states |
 
 ### UX reorganisation (after first review)
 App bar is one row with an editable project name and a dirty/save indicator; project management moved to the main menu modal (☰ / ⌘,): rename, new, open from a saved list, save (⌘S), export/import, delete. MIDI is in the main menu with a status icon in the app bar. The sidebar is an icon rail with Samples, Instruments (new: click a synth to load it on the selected track) and Patterns; the dead "Library" chevron is gone. V1's Edit panel became an **Edit ▾** popover in the context bar. Transport, context bar, track headers and panel headers use an inline icon set (`ui/kit/Icon.tsx`) with tooltips. Controller gained `isDirty`.

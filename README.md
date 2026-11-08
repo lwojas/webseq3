@@ -19,9 +19,9 @@ gotchas" below.
 
 ## The UI
 
-The default UI is the composition-focused rebuild (step lane → step graph → piano roll → arrangement; sidebar, main menu, device area).
-Its design, the V1 feature checklist and the accessibility notes are in [`docs/rebuild/`](docs/rebuild/). The original UI is still
-available at `?ui=1` (e.g. `http://localhost:5174/?ui=1`) until it is removed. Both run on the same controller (`src/state/useController.tsx`).
+The UI is the composition-focused rebuild (step lane → step graph → piano roll → arrangement; sidebar, main menu, device area).
+Its design, the V1 feature checklist and the accessibility notes are in [`docs/rebuild/`](docs/rebuild/). The original V1 UI has been
+removed; its behaviour lives on in `src/state/useController.tsx` and the shared panels in `src/components/`.
 
 ## Getting started
 
@@ -62,21 +62,18 @@ src/audio/        — the one place the model meets webdsp:
                       useAudioRuntime.ts — the only place AudioRuntime.create() is called
 src/persistence/  — IndexedDB-backed project + sample save/load (db.ts, projectStore.ts).
                     No backend; fully local/offline.
-src/app/          — layout, kept apart from state and behaviour: layout.ts (view types, the
-                    one `useLayout()` breakpoint hook, and the pure `deriveLayout()` that
-                    says what shows where), Chrome / Workspace / SidePanel / Dock /
-                    PatternsView / MobileTabBar (arrangement per breakpoint), editModel.ts
-                    (the Edit panel's clipboard rows and bar tools, incl. Extend Track — repeats the
-                    selected track's last occupied bar, 1 bar or to the pattern end, never changing
-                    Pattern.bars). App.tsx owns the state
-                    and handlers and passes already-wired props to these.
-src/components/   — React: transport bar, pattern strip (the pattern being edited), Patterns
-                    page (library + queue with reordering), sequencer grid (MASTER row +
-                    tracks), FX / Instrument / Edit panels (contextual to the selected track
-                    or MASTER), automation lane editor. Playhead and the position and "bar x
-                    / y" readouts are driven by requestAnimationFrame reading Transport's
-                    own clock — never React state — see hooks/usePlayheadAnimation.ts,
-                    hooks/useRafText.ts, components/RafText.tsx.
+src/state/        — useController.tsx: the application's state and behaviour in one hook (project history,
+                    selection, transport / playback / host wiring, persistence, MIDI). The UI reads it; nothing
+                    here renders.
+src/app/          — layout.ts (breakpoint, which view is showing), editModel.ts (the Edit menu's clipboard rows
+                    and bar tools), useComposer.ts, useAutomationEditing.ts.
+src/ui/           — the interface: Shell (app bar, context bar, sidebar, workspaces, device area), kit/ (icon,
+                    popover, panel header, track header, splitter, accessibility helpers), pattern/ (step lane,
+                    graph, piano roll), arrange/, MainMenu, Sidebar, PatternsPanel, EditMenu, Transport.
+src/components/   — the reusable panels the shell hosts: Instrument / FX / modulation / automation / EQ / patch
+                    matrix editors, assets, MIDI, mixer, composer timeline, Musical Guide. Playhead and readouts
+                    are driven by requestAnimationFrame reading Transport's own clock, never React state (see
+                    hooks/usePlayheadAnimation.ts, hooks/useRafText.ts, components/RafText.tsx).
 ```
 
 The application model (`src/model/`) never imports `"webdsp"`. `src/audio/compile.ts` is the
@@ -316,18 +313,17 @@ visible (Patterns view, a phone's takeover views, another tab).
 
 ## Layout
 
-Regions are fixed-size: content scrolls inside them and never resizes a neighbour, nothing
-animates size or position, and only the active tab/panel is mounted. Desktop: top bar and tabs
-(Sequencer | Patterns), transport, the pattern strip, then the left column (Assets | MIDI | Edit,
-260px), the grid with the bank tabs in its corner, and the bottom panel (Instrument | FX | Track
-Editor | Mixer). A phone has one 44px top bar and four tabs (Timeline | Track | Mixer | Library).
-The breakpoint (768px) lives in `app/layout.ts` and, because CSS cannot import it,
-`@media (max-width: 768px)` in `index.css` — `test/layout.test.ts` fails if they drift apart.
+Regions are fixed-size: content scrolls inside them and never resizes a neighbour, and nothing animates size or
+position. Desktop: one app bar (menu, project name and save state, workspace switch, transport), a context bar for what is being
+edited, an icon rail with a collapsible sidebar (Samples, Instruments, Patterns), one of three workspaces (Pattern, Arrange,
+Mixer), and the selected track's device area. A phone shows one section at a time (Pattern, Arrange, Mixer, Track, Library).
+The breakpoint (768px) lives in `app/layout.ts` and, because CSS cannot import it, `@media (max-width: 768px)` in `index.css`
+and `ui/ui.css` — `test/layout.test.ts` fails if they drift apart. The design rules are in `docs/rebuild/04-ui-rules.md`.
 
 ## Pattern queue reordering
 
 The Patterns page's ▲ ▼ move a queue entry (`model/project.ts`'s `moveChainEntry`). Because the
-transport walks the queue with an ever-increasing step counter, App.tsx also calls
+transport walks the queue with an ever-increasing step counter, the controller also calls
 `Transport.shiftChainSteps(chainShiftForReorder(...))` in the same handler, so the entry that is
 sounding stays "now" and the next step follows its successor in the new order.
 

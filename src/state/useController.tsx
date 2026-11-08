@@ -4,7 +4,7 @@ import { forgetPeaks } from "../audio/peaks";
 import type { Asset, AssetId, AutomationLane, Project, ChainEntryId, FxId, FxTarget, FxType, InstrumentKindId, NoteId, PatternId, PlaybackMode, SampleEnvelope, SampleMode, Track, TrackEventLfo, TrackId, TrackLfo, VoiceMode } from "../model/types";
 import { useAutomationEditing } from "../app/useAutomationEditing";
 import { FX_KIND, fxChainsFor } from "../audio/fxChain";
-import { notesForTrack, trackById, trackHasSource } from "../model/types";
+import { notesForTrack, trackById } from "../model/types";
 import { findLane } from "../model/automation";
 import { lanesInPattern } from "../model/patternAutomation";
 import { BANK_SIZE, createInitialProject, pasteNotes, summarizeBanks, withMissingTracks } from "../model/project";
@@ -104,10 +104,10 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
   const [manual, setManual] = useState<ManualPlaybackSnapshot>({ auditionAssetId: null, loopingTrackIds: [] });
   const [selectedPatternId, setSelectedPatternId] = useState(project.patterns[0].id);
   const [sidePanelView, setSidePanelView] = useState<SidePanelView>("assets");
-  const [bottomPanelView, setBottomPanelView] = useState<BottomPanelView>("instrument");
+  const [bottomPanelView] = useState<BottomPanelView>("instrument");
   const [mobileTab, setMobileTab] = useState<MobileTab>("timeline");
-  const [trackSubTab, setTrackSubTab] = useState<TrackSubTab>("instrument");
-  const [libraryView, setLibraryView] = useState<LibraryView>("assets");
+  const [trackSubTab] = useState<TrackSubTab>("instrument");
+  const [libraryView] = useState<LibraryView>("assets");
   const [takeover, setTakeover] = useState<Takeover>("none");
   const layout = useLayout();
   const [mainView, setMainView] = useState<MainView>("sequencer");
@@ -663,12 +663,6 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     (direction: -1 | 1) => setSelectedPatternId((current) => adjacentPatternId(projectRef.current.patterns, current, direction)),
     [],
   );
-  const handlePickPattern = useCallback((id: PatternId) => {
-    setSelectedPatternId(id);
-    setTakeover("none");
-  }, []);
-  const handleTogglePicker = useCallback(() => setTakeover((t) => (t === "picker" ? "none" : "picker")), []);
-  const handleToggleSettings = useCallback(() => setTakeover((t) => (t === "settings" ? "none" : "settings")), []);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -996,15 +990,6 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     [],
   );
 
-  // Changing tab always leaves a takeover view (picker / settings), which only exist on the Timeline.
-  const handleSelectMobileTab = useCallback((tab: MobileTab) => {
-    setMobileTab(tab);
-    setTakeover("none");
-  }, []);
-  const handleSelectLibraryView = useCallback((view: LibraryView) => {
-    setLibraryView(view);
-    if (view !== "patterns") setSidePanelView(view);
-  }, []);
 
   // --- Musical Guide ---
   // A modal over the sequencer. Opening pauses playback and makes everything behind it inert
@@ -1391,10 +1376,6 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     },
     [runtime],
   );
-  const handleSelectDockView = (view: BottomPanelView) => {
-    if (layout.isPhone) setTrackSubTab(view as TrackSubTab);
-    else setBottomPanelView(view);
-  };
   const handleSelectMainView = (view: MainView) => {
     setMainView(view);
     setTakeover("none");
@@ -1480,29 +1461,10 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     handleSelectTarget(track.id);
     setActiveBank(Math.floor(next / BANK_SIZE));
   };
-  const trackHeadLabel = selectedTrack
-    ? `${String(selectedIndex + 1).padStart(2, "0")} · ${trackHasSource(selectedTrack) ? selectedTrack.name : "empty"}`
-    : selectedTarget === "master"
-      ? "MASTER"
-      : "—";
 
   // Stable identity until the project's scale changes, so the memoised Track Editor isn't re-rendered
   // by every unrelated project edit.
   const projectScale = useMemo(() => scaleOf(project), [project.scale]); // eslint-disable-line react-hooks/exhaustive-deps
-  const projectBarProps = {
-    saveStatus,
-    saveError,
-    savedProjects,
-    loadTargetId,
-    onNew: handleNewProject,
-    onSave: handleSaveProject,
-    onSelectSaved: setLoadTargetId,
-    onLoad: handleLoadProject,
-    onDelete: handleDeleteProject,
-    onExport: handleExportProject,
-    onImport: handleImportProject,
-    fileError,
-  };
   const transportProps = {
     status,
     bpm: project.bpm,
@@ -1556,17 +1518,6 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     getAssetBytes,
   };
   const editProps = { clipboard: clipboardRows, barTools, chopTools, feedback: clipboardStatus, composer: mainView === "composer" ? composer.details : undefined, history: { canUndo, canRedo, onUndo: handleUndo, onRedo: handleRedo } };
-  const trackHeaderProps = {
-    track: selectedTrack ?? null,
-    label: trackHeadLabel,
-    canPrev: selectedIndex > 0,
-    canNext: selectedIndex < project.tracks.length - 1,
-    onStep: handleStepTrack,
-    onSetMuted: handleSetTrackMuted,
-    onSetSoloed: handleSetTrackSoloed,
-    playing: status === "playing",
-    onTogglePlay: () => (status === "playing" ? handleStop() : void handlePlay()),
-  };
   const addPattern = () => dispatch({ type: "ADD_PATTERN" });
   const setPatternBars = (id: PatternId, bars: number) => dispatch({ type: "SET_PATTERN_BARS", patternId: id, bars });
   const duplicatePattern = (id: PatternId) => dispatch({ type: "DUPLICATE_PATTERN", patternId: id });
@@ -1584,21 +1535,15 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     activeBank,
     addPattern,
     appRef,
-    assetDataRef,
-    automationFocus,
     automationFor,
     automationRow,
     bankSummaries,
     barTools,
-    bottomPanelView,
     canRedo,
     canUndo,
     canZoomIn,
     canZoomOut,
-    capabilities,
     chopTools,
-    cleanBaselineRef,
-    clipboardRows,
     clipboardStatus,
     composer,
     composerAutomationEdit,
@@ -1606,17 +1551,13 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     derived,
     dispatch,
     duplicatePattern,
-    editClipboard,
     editProps,
-    editShowing,
     ensurePlayback,
-    ensureTransport,
     error,
     fileError,
     followedBpm,
     fxLfoUi,
     fxOwner,
-    getAssetBytes,
     getBusId,
     getGuideRuntime,
     getPlayheadBeat,
@@ -1627,20 +1568,14 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     getSongText,
     gridResolution,
     guideOpen,
-    guideOpenRef,
     handleAddFx,
     handleAddFxLfo,
-    handleAddLfo,
     handleAddNote,
     handleAddToComposer,
     handleApplyRecipe,
     handleAssignAsset,
     handleAuditionAsset,
-    handleAuditionSlice,
-    handleBpmChange,
-    handleClearTrack,
     handleCloseGuide,
-    handleCopyTrack,
     handleDeleteProject,
     handleDismissRecovery,
     handleEditPattern,
@@ -1652,41 +1587,24 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     handleMoveNote,
     handleNewProject,
     handleOpenGuide,
-    handlePasteNotes,
-    handlePause,
-    handlePickPattern,
     handlePlay,
-    handlePlaySongFrom,
     handleQueueNext,
-    handleRedo,
     handleRemoveAsset,
     handleRemoveChainEntry,
     handleRemoveFx,
     handleRemoveFxLfo,
-    handleRemoveLfo,
     handleRemoveNote,
     handleRenameAsset,
-    handleResample,
     handleResetPatternSettings,
     handleResizeNote,
     handleRestoreRecovery,
     handleSaveProject,
-    handleScaleChange,
-    handleSelectDockView,
-    handleSelectLibraryView,
     handleSelectMainView,
-    handleSelectMobileTab,
     handleSelectTarget,
-    handleSetAssetGain,
-    handleSetChopStart,
-    handleSetCues,
-    handleSetEnvelope,
     handleSetFxEnabled,
     handleSetFxLfo,
     handleSetFxParam,
     handleSetInstrument,
-    handleSetInstrumentParam,
-    handleSetLfo,
     handleSetNoteChord,
     handleSetNoteDuration,
     handleSetNoteLfo,
@@ -1695,11 +1613,7 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     handleSetNoteRatchet,
     handleSetNoteTie,
     handleSetNoteVelocity,
-    handleSetSampleMode,
-    handleSetSource,
     handleSetTrackArp,
-    handleSetTrackChokeGroup,
-    handleSetTrackEnvelope,
     handleSetTrackEventLfo,
     handleSetTrackMuted,
     handleSetTrackNotesLfo,
@@ -1707,129 +1621,57 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     handleSetTrackNotesTie,
     handleSetTrackOutput,
     handleSetTrackPan,
-    handleSetTrackPlaybackMode,
     handleSetTrackSend,
     handleSetTrackSoloed,
-    handleSetTrackVoiceMode,
     handleSetTrackVolume,
     handleStepPattern,
     handleStepTrack,
-    handleStop,
-    handleSwingChange,
-    handleTogglePicker,
-    handleToggleSettings,
     handleTriggerTrack,
-    handleUndo,
     history,
-    hostAnswered,
-    hostState,
-    importAsset,
     importAssets,
     importBatchResult,
-    init,
-    installProject,
     instrumentProps,
     launcher,
     layout,
-    libraryView,
     loadTargetId,
     mainView,
     manual,
     midi,
-    mobileTab,
-    modulationUi,
-    noteClipboard,
     onZoomIn,
     onZoomOut,
-    playbackRef,
-    playbackSource,
-    playbackSourceRef,
-    playheadInfo,
     playingChainEntryId,
     playingPatternId,
     playingSequenceIds,
-    playingSequenceKey,
-    preselectedForRef,
-    prevPatternIds,
-    pristineRef,
     project,
-    projectBarProps,
-    projectRef,
     projectScale,
-    pushSequence,
     pxPerBeat,
-    recoveryChecked,
     recoveryPrompt,
-    recoveryScheduler,
-    refreshSavedProjects,
     removePattern,
     renamePattern,
     resampleError,
     resamplePhase,
-    restoreRecord,
-    restoredSnapshotRef,
     runtime,
     saveError,
     saveStatus,
     savedProjects,
     selectedFxId,
-    selectedIndex,
-    selectedKindId,
-    selectedNote,
     selectedNoteId,
     selectedPattern,
     selectedPatternId,
     selectedTarget,
-    selectedTargetRef,
     selectedTrack,
     selectedTrackAsset,
-    selectedTrackAssetUseCount,
-    selectedTrackHasNotes,
-    sentRouteRef,
-    sentSequenceRef,
     setActiveBank,
-    setBottomPanelView,
     setClipboardStatus,
-    setEditClipboard,
-    setFileError,
-    setFollowedBpm,
     setGridResolution,
-    setGuideOpen,
-    setHostAnswered,
-    setImportBatchResult,
-    setLibraryView,
     setLoadTargetId,
-    setMainView,
-    setManual,
-    setMobileTab,
-    setNoteClipboard,
     setPatternBars,
-    setPlaybackSourceState,
-    setRecoveryChecked,
-    setRecoveryPrompt,
-    setResampleError,
-    setResamplePhase,
-    setSaveError,
-    setSaveStatus,
-    setSavedProjects,
     setSelectedFxId,
     setSelectedNoteId,
     setSelectedPatternId,
-    setSelectedTarget,
-    setSidePanelView,
-    setStatus,
-    setTakeover,
-    setTrackSubTab,
-    sidePanelView,
     spectrumTapFor,
     status,
-    takeover,
-    trackBusesRef,
-    trackHeadLabel,
-    trackHeaderProps,
-    trackSubTab,
     transportProps,
-    transportRef,
     unavailableKinds,
     zoomPercent,
   };
