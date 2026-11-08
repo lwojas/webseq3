@@ -31,9 +31,11 @@ export const tabPanelProps = (idBase: string, tab: string) => ({ id: `${idBase}-
 export function PanelHeader<T extends string>({ idBase, title, subject, tabs, tab, onTab, actions, collapsed, onToggleCollapsed, maximised, onToggleMaximised }: Props<T>) {
   return (
     <div className="wx-panel-header">
-      <button className={`wx-panel-toggle ${collapsed ? "collapsed" : ""}`} onClick={onToggleCollapsed} aria-expanded={!collapsed} aria-label={`${collapsed ? "Expand" : "Collapse"} ${title}`} disabled={!onToggleCollapsed}>
-        <Icon name="chevronDown" size={12} />
-      </button>
+      {onToggleCollapsed && (
+        <button className={`wx-panel-toggle ${collapsed ? "collapsed" : ""}`} onClick={onToggleCollapsed} aria-expanded={!collapsed} aria-label={`${collapsed ? "Expand" : "Collapse"} ${title}`}>
+          <Icon name="chevronDown" size={12} />
+        </button>
+      )}
       <span className="wx-panel-title">{title}</span>
       {subject && <span className="wx-panel-subject">· {subject}</span>}
       {tabs && !collapsed && (

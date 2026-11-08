@@ -212,11 +212,7 @@
 .wx-drawer.maximised { position: sticky; left: 0; }
 .wx-drawer-body { position: relative; }
 .wx-drawer-body.roll { display: flex; flex-direction: column; min-width: 0; position: sticky; left: 0; width: calc(100vw - var(--wx-library-w) - 2px); max-width: 100%; }
-.wx-drawer-closed { border-bottom: 1px solid var(--wx-hairline); background: var(--bg); }
-.wx-drawer-closed .wx-panel-header { background: color-mix(in srgb, var(--identity) 12%, var(--bg)); }
 .wx-panel-toggle.collapsed svg { transform: rotate(-90deg); }
-.wx-drawer-open { background: transparent; border: 0; color: var(--text-dim); cursor: pointer; padding: 0 6px; height: 20px; margin-left: 6px; }
-.wx-drawer-open:hover { color: var(--accent); }
 .wx-graph { position: relative; padding-left: var(--wx-head-w); }
 .wx-graph-body { overflow: visible; }
 .wx-graph-plot { position: relative; height: 100%; cursor: crosshair; touch-action: none;
@@ -388,7 +384,6 @@
   .wx-ms { width: 28px; height: 28px; }
   :root { --wx-row-h: 40px; }
 }
-.wx-drawer-open { display: inline-flex; align-items: center; gap: 5px; }
 .wx-ms { display: inline-flex; align-items: center; justify-content: center; }
 .wx-ms.off svg { opacity: 1; }
 .wx-track-src { display: inline-flex; justify-content: center; }

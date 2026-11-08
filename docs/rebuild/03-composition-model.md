@@ -36,7 +36,7 @@ depth 0  STEP    the track's lane in the step grid (default; always visible; all
 depth 1  GRAPH   drawer under the track: one property at a time as a bar graph over the same step columns
 depth 2  ROLL    the same drawer, last tab: individual notes by pitch/time
 ```
-The drawer is attached to the selected track, shares the lane's horizontal scale and scroll, and collapses to nothing.
+The drawer is attached to the selected track, shares the lane's horizontal scale and scroll, and is shown or hidden with the graph toggle beside the zoom control (`G`); when hidden there is no extra row at all.
 
 ## 2. Resolution: why we keep `Note` as it is
 

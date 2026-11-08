@@ -114,8 +114,6 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
         onTab={(t) => onDrawer({ tab: t })}
         maximised={drawer.maximised}
         onToggleMaximised={() => onDrawer({ maximised: !drawer.maximised })}
-        onToggleCollapsed={() => onDrawer({ open: false })}
-        collapsed={false}
       />
       {tab === "roll" ? (
         <div className="wx-drawer-body roll" {...tabPanelProps(drawerId, tab)} style={{ height: drawer.maximised ? undefined : drawer.height + 150 }}>
@@ -182,16 +180,6 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
       )}
       {tab !== "roll" && tab !== "chord" && tab !== "auto" && !drawer.maximised && <Splitter axis="row" shellRef={{ current: null }} cssVar="--wx-drawer-h" value={drawer.height} min={80} max={360} direction={1} onCommit={(height) => onDrawer({ height })} label="Resize graph" />}
     </div>
-  ) : selectedTrack ? (
-    // Collapsed: the same header as the expanded drawer, in the same place, with the chevron turned. Nothing jumps when it opens.
-    <div className="wx-drawer wx-drawer-closed" style={{ ["--identity" as string]: trackColor(trackIndex) } as CSSProperties}>
-      <div className="wx-panel-header">
-        <button className="wx-panel-toggle collapsed" onClick={() => onDrawer({ open: true })} aria-expanded={false} aria-label="Expand GRAPH" title="Expand the step graph under this track (G)"><Icon name="chevronDown" size={12} /></button>
-        <span className="wx-panel-title">GRAPH</span>
-        <span className="wx-panel-subject">· {String(trackIndex + 1).padStart(2, "0")} {selectedTrack.name}</span>
-        <button className="wx-drawer-open" onClick={() => onDrawer({ open: true, tab: "roll" })} title="Open the piano roll for this track"><Icon name="roll" size={13} /> Roll</button>
-      </div>
-    </div>
   ) : null;
 
   return (
@@ -211,6 +199,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
           <span className="wx-zoom">{p.zoomPercent}%</span>
           <button onClick={p.onZoomIn} disabled={!p.canZoomIn} aria-label="Zoom in" title="Zoom in">+</button>
         </div>
+        <button className="wx-icon-btn" onClick={() => onDrawer({ open: !drawer.open })} aria-pressed={drawer.open} aria-label="Graph editor" title="Graph editor under the selected track: show or hide (G)"><Icon name="graph" /></button>
         <span className="wx-spacer" />
         <span className="wx-note hint">click adds / removes · drag moves · edge resizes · alt = free · ⋮ = several notes (select, then Roll)</span>
       </div>
