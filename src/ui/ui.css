@@ -467,3 +467,6 @@
 .wx-cursor { position: absolute; top: 3px; bottom: 3px; border: 1px dashed transparent; border-radius: 2px; pointer-events: none; }
 .wx-lane:focus-visible .wx-cursor { border-color: var(--text); }
 .wx-lane:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+
+/* the end of the pattern: a line after its last step (the grid lines are drawn at the start of each step, so step 16 had no right edge) */
+.wx-cells::after, .wx-graph-plot::after { content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 2px; background: color-mix(in srgb, var(--text-dim) 65%, var(--border-strong)); pointer-events: none; z-index: 3; }
