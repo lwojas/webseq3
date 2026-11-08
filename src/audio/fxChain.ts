@@ -37,6 +37,7 @@ export const FX_KIND: Record<FxType, EffectKind> = {
   eq: EffectKind.Eq,
   glitch: EffectKind.Glitch,
   dubSpace: EffectKind.DubSpace,
+  characterFilter: EffectKind.CharacterFilter,
 };
 
 /** FX param id (model/fx.ts FX_DEFS) -> the engine's NodeParam. */
@@ -113,6 +114,14 @@ export const FX_NODE_PARAMS: Record<FxType, Record<string, NodeParam>> = {
     damping: NodeParam.DubSpaceDamping,
     character: NodeParam.DubSpaceCharacter,
     mix: NodeParam.DubSpaceMix,
+  },
+  characterFilter: {
+    mode: NodeParam.CharFilterMode,
+    cutoff: NodeParam.CharFilterCutoff,
+    resonance: NodeParam.CharFilterResonance,
+    drive: NodeParam.CharFilterDrive,
+    character: NodeParam.CharFilterCharacter,
+    envAmount: NodeParam.CharFilterEnvAmount,
   },
 };
 

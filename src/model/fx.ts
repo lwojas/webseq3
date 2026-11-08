@@ -305,6 +305,35 @@ export const FX_DEFS: Record<FxType, FxDef> = {
       { id: "mix", label: "Mix", min: 0, max: 1, step: 0.01, default: 0 },
     ],
   },
+  // Resonant ladder-family filter with in-loop saturation (webdsp Character Filter, docs/character-filter.md). Resonance is compressive and
+  // self-oscillates in its top ~10 %; Character voices it from Clean through Warm and Punchy to Aggressive; Env lets an input follower
+  // move the cutoff (negative closes it). No Mix: it filters the whole signal. Defaults are a light colouring, not a bypass (remove or
+  // disable the instance to bypass). Mode values mirror webdsp's CharacterFilterMode.
+  characterFilter: {
+    type: "characterFilter",
+    label: "Character Filter",
+    params: [
+      {
+        id: "mode",
+        label: "Mode",
+        min: 0,
+        max: 3,
+        step: 1,
+        default: 0,
+        options: [
+          { label: "LP 24", value: 0 },
+          { label: "LP 12", value: 1 },
+          { label: "Band Pass", value: 2 },
+          { label: "HP 24", value: 3 },
+        ],
+      },
+      { id: "cutoff", label: "Cutoff", min: 30, max: 18000, step: 1, unit: "Hz", default: 18000 },
+      { id: "resonance", label: "Resonance", min: 0, max: 1, step: 0.01, default: 0 },
+      { id: "drive", label: "Drive", min: 0, max: 1, step: 0.01, default: 0 },
+      { id: "character", label: "Character", min: 0, max: 1, step: 0.01, default: 0.4 },
+      { id: "envAmount", label: "Env", min: -1, max: 1, step: 0.01, default: 0 },
+    ],
+  },
   // A bare gain stage (webdsp Utility FX): the automatable per-track volume. Unity (0 dB) is
   // neutral; the bottom of the range is silence. Deliberately one parameter.
   utility: {

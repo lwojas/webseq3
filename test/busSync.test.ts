@@ -40,6 +40,20 @@ describe("syncBuses", () => {
     expect(sent).toContainEqual([NodeParam.GlitchSpeed, 1]);
   });
 
+  it("maps a Character Filter to the engine kind and sends its parameters", () => {
+    const { runtime, calls, raw } = mockRuntime();
+    let project = addFx(createInitialProject(), "track-2", "characterFilter");
+    const id = project.tracks.find((t) => t.id === "track-2")!.fx[0].id;
+    project = setFxParam(project, "track-2", id, "mode", 3);
+    project = setFxParam(project, "track-2", id, "envAmount", -0.5);
+    syncBuses(runtime, project, buses);
+    expect(calls.addEffect.map((a) => [a.bus, a.kind])).toEqual([[2, EffectKind.CharacterFilter]]);
+    const sent = raw.setEffectParameter.mock.calls.map(([, , p, v]) => [p, v]);
+    expect(sent).toContainEqual([NodeParam.CharFilterMode, 3]);
+    expect(sent).toContainEqual([NodeParam.CharFilterEnvAmount, -0.5]);
+    expect(sent).toContainEqual([NodeParam.CharFilterCharacter, 0.4]);
+  });
+
   it("maps a Dub Delay to the engine kind and sends its division as a step index", () => {
     const { runtime, calls, raw } = mockRuntime();
     let project = addFx(createInitialProject(), "track-2", "dubDelay");
