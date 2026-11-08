@@ -132,7 +132,7 @@ interface NoteLink {
 
 /** Ties on one synth track: per chord voice, a note with `tie` links to the next note of that voice.
  * Nothing links across the pattern's end (no next note), under the arp (generated notes carry no tie),
- * or on a synth without a legato mode. */
+ * or on a synth without a legato mode or glide time. */
 function noteLinks(track: Track, notes: PlayedNote[], bpm: number, stepStartTime: number, swing: number): Map<PlayedNote, NoteLink> {
   const links = new Map<PlayedNote, NoteLink>();
   if (!supportsTie(track) || !notes.some((n) => n.tie)) return links;

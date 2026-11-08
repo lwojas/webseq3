@@ -154,7 +154,7 @@ export interface TrackEventLfo {
 }
 
 /** A track's synth source: which engine instrument kind (by webdsp's stable string id —
- * "kick", "snare", "clap", "tom", "hihat", "bass", "pulse", "pad", "fm", "hypersaw", "pwmbeast", "dm_thump", "dm_metal", "dm_tone", "dm_crack", "dm_chaos", "percsynth", "edge", "matrix", "noise" — never its display name) and its current
+ * "kick", "snare", "clap", "tom", "hihat", "bass", "pulse", "pad", "fm", "hypersaw", "pwmbeast", "dm_thump", "dm_metal", "dm_tone", "dm_crack", "dm_chaos", "percsynth", "edge", "matrix", "noise", "wobble" — never its display name) and its current
  * control values, keyed by the parameter ids in model/instruments.ts's INSTRUMENT_DEFS. */
 export interface TrackInstrument {
   kind: InstrumentKindId;
@@ -182,7 +182,7 @@ export interface TrackLfo {
   target: string;
 }
 
-export type InstrumentKindId = "kick" | "snare" | "clap" | "tom" | "hihat" | "bass" | "pulse" | "pad" | "fm" | "hypersaw" | "pwmbeast" | "dm_thump" | "dm_metal" | "dm_tone" | "dm_crack" | "dm_chaos" | "percsynth" | "edge" | "matrix" | "noise";
+export type InstrumentKindId = "kick" | "snare" | "clap" | "tom" | "hihat" | "bass" | "pulse" | "pad" | "fm" | "hypersaw" | "pwmbeast" | "dm_thump" | "dm_metal" | "dm_tone" | "dm_crack" | "dm_chaos" | "percsynth" | "edge" | "matrix" | "noise" | "wobble";
 
 /** One-shot: plays through once, bounded by its triggering note's length (today's only
  * behavior). Loop: the same, but the asset tiles/repeats to fill that note's full length
@@ -283,7 +283,7 @@ export interface Note {
   ratchet?: number;
   /** Tied into the next note of the same track (a 303-style slide): this note's gate stays open through
    * the next note's start and that note glides in with no re-attack. Only meaningful on a synth with a
-   * legato mode (supportsTie); absent = false, so older projects are byte-identical. */
+   * legato mode or glide time (supportsTie); absent = false, so older projects are byte-identical. */
   tie?: boolean;
 }
 

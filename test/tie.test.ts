@@ -11,7 +11,7 @@ const SPB = secondsPerBeat(120);
 const ctx = { getBusId: () => undefined, instrumentIdFor: () => 1, hasSample: () => true, automation: () => [] };
 
 /** Three bass notes on track-1 (steps 0, 4, 8; 2 steps long), optionally tying the first. */
-function bass(kind: "bass" | "kick" = "bass", tieFirst = false): Project {
+function bass(kind: "bass" | "kick" | "wobble" = "bass", tieFirst = false): Project {
   let p = setTrackInstrument(createInitialProject("t", 2), "track-1", kind);
   let pat = p.patterns[0];
   for (const start of [0, 4, 8]) pat = addNote(pat, p.beatsPerBar, "track-1", start, 2, 1);
@@ -28,6 +28,10 @@ describe("tie", () => {
   it("only synths with a legato mode can tie", () => {
     expect(supportsTie(bass().tracks[0])).toBe(true);
     expect(supportsTie(bass("kick").tracks[0])).toBe(false);
+  });
+
+  it("Wobble can tie: its Glide time is the slide", () => {
+    expect(supportsTie(bass("wobble").tracks[0])).toBe(true);
   });
 
   it("an untied sequence compiles exactly as before", () => {

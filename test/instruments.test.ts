@@ -180,7 +180,7 @@ describe("compileInstrumentNotes", () => {
   });
 
   it("has no Filter Mod control: the shared filter modulation was removed from Bass and Pulse", () => {
-    for (const kind of ["bass", "pulse", "pad", "fm", "hypersaw", "pwmbeast", "dm_thump", "dm_metal", "dm_tone", "dm_crack", "dm_chaos", "percsynth", "edge", "matrix", "noise"] as const) {
+    for (const kind of ["bass", "pulse", "pad", "fm", "hypersaw", "pwmbeast", "dm_thump", "dm_metal", "dm_tone", "dm_crack", "dm_chaos", "percsynth", "edge", "matrix", "noise", "wobble"] as const) {
       expect(INSTRUMENT_DEFS[kind].params.some((p) => p.id === "filterMod")).toBe(false);
     }
   });
@@ -267,6 +267,23 @@ describe("compileInstrumentNotes", () => {
     expect(def.params.find((p) => p.id === "attack")!.max).toBeGreaterThanOrEqual(8);   // risers
     const proj = projectWithNotes("noise");
     expect(rootMidiNote(proj.tracks[0])).toBeCloseTo(12 * Math.log2(900 / 440) + 69);   // 900 Hz
+    expect(compileInstrumentNotes(proj.patterns[0], proj.tracks, 120, 10)[0].params.duration).toBeGreaterThan(0);
+  });
+
+  it("lists Wobble as sustained, with every engine param, the rate and shape options and an A1 root", () => {
+    const def = INSTRUMENT_DEFS.wobble;
+    expect(def.sustained).toBe(true);
+    expect(def.params.map((p) => p.id)).toEqual(["gain", ...INSTRUMENT_PARAM_NAMES.wobble]);
+    expect(new Set(def.params.map((p) => p.id)).size).toBe(def.params.length);
+    for (const p of def.params) {
+      expect(p.default).toBeGreaterThanOrEqual(p.min);
+      expect(p.default).toBeLessThanOrEqual(p.max);
+    }
+    expect(def.params.find((p) => p.id === "rate")?.options?.map((o) => o.label)).toHaveLength(12);
+    expect(def.params.find((p) => p.id === "rate")?.options?.[6].label).toBe("1/8");   // the default
+    expect(def.params.find((p) => p.id === "shape")?.options?.map((o) => o.label)).toEqual(["Smooth", "Square", "Ramp", "Random"]);
+    const proj = projectWithNotes("wobble");
+    expect(rootMidiNote(proj.tracks[0])).toBeCloseTo(33);   // 55 Hz = A1
     expect(compileInstrumentNotes(proj.patterns[0], proj.tracks, 120, 10)[0].params.duration).toBeGreaterThan(0);
   });
 

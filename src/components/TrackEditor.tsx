@@ -97,7 +97,7 @@ interface CardProps {
   onSetNotePitch: (noteId: NoteId, pitch: number) => void;
   onSetNoteVelocity: (noteId: NoteId, velocity: number) => void;
   onSetNoteRatchet: (noteId: NoteId, ratchet: number) => void;
-  /** The synth has a legato mode, so a step can be tied. */
+  /** The synth has a legato mode or glide time, so a step can be tied. */
   canTie: boolean;
   onSetNoteTie: (noteId: NoteId, tie: boolean) => void;
   onSetNoteDuration: (noteId: NoteId, duration: number) => void;

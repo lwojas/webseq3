@@ -142,7 +142,7 @@ Row IDs are referenced by the parity test (§3).
 ### G · Instruments (synths)
 | ID | Feature | V1 source | Destination | |
 |---|---|---|---|---|
-| G1 | 20 kinds: kick, snare, clap, tom, hihat, bass, pulse, pad, fm, hypersaw, pwmbeast, dm_thump/metal/tone/crack/chaos, percsynth, edge, matrix, noise (availability depends on engine build: `unavailableKinds`) | `INSTRUMENT_DEFS` | INST | ☑ B |
+| G1 | 21 kinds: kick, snare, clap, tom, hihat, bass, pulse, pad, fm, hypersaw, pwmbeast, dm_thump/metal/tone/crack/chaos, percsynth, edge, matrix, noise, wobble (availability depends on engine build: `unavailableKinds`) | `INSTRUMENT_DEFS` | INST | ☑ B |
 | G2 | Instrument params (incl. source gain), generic control rendering, automation entry ("Automate this parameter") | `SET_INSTRUMENT_PARAM`, `InstrumentPanel` | INST | ☑ R |
 | G3 | Instrument LFO slots (add/set/remove), sync/free, targets | `ADD/SET/REMOVE_INSTRUMENT_LFO`, `ModulationSlot` | MOD | ☑ R |
 | G4 | Patch-matrix editor (matrix kind) | `PatchMatrixEditor`, `patchMatrixView` | INST (matrix) | ☑ R |

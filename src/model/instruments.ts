@@ -541,6 +541,31 @@ export const INSTRUMENT_DEFS: Record<InstrumentKindId, InstrumentDef> = {
       { id: "mix", label: "Mix", min: 0, max: 1, step: 0.01, default: 0.5 },
     ],
   },
+  // Wobble (webdsp docs/wobble-instrument.md): an opinionated bass-music bass. Eight macros (Wobble, Rate, Growl,
+  // Bite, Weight, Drive, Cutoff, Resonance) over a tempo-locked wobble that moves filter, FM growl, resonance and a
+  // formant vowel together, above an unfiltered sub. Rate is a synced cycle length (Free Rate > 0 replaces it with a
+  // free-running wobble). Sustained: attack is fixed and sustain is full, so a note's length is its held time.
+  wobble: {
+    kind: "wobble",
+    label: "Wobble",
+    category: "synth",
+    sustained: true,
+    params: [
+      { id: "wobble", label: "Wobble", min: 0, max: 1, step: 0.01, default: 0.6 },
+      { id: "rate", label: "Rate", min: 0, max: 11, step: 1, default: 6, options: stepOptions(["1/1", "1/2", "1/4.", "1/4", "1/8.", "1/4T", "1/8", "1/16.", "1/8T", "1/16", "1/16T", "1/32"]) },
+      { id: "shape", label: "Shape", min: 0, max: 3, step: 1, default: 0, options: stepOptions(["Smooth", "Square", "Ramp", "Random"]) },
+      { id: "growl", label: "Growl", min: 0, max: 1, step: 0.01, default: 0.5 },
+      { id: "bite", label: "Bite", min: 0, max: 1, step: 0.01, default: 0.45 },
+      { id: "weight", label: "Weight", min: 0, max: 1, step: 0.01, default: 0.6 },
+      { id: "drive", label: "Drive", min: 0, max: 1, step: 0.01, default: 0.4 },
+      { id: "cutoff", label: "Cutoff", min: 80, max: 8000, step: 1, unit: "Hz", default: 650 },
+      { id: "resonance", label: "Resonance", min: 0, max: 1, step: 0.01, default: 0.4 },
+      { id: "tune", label: "Root", min: 27.5, max: 110, step: 0.5, unit: "Hz", default: 55 },
+      { id: "release", label: "Release", min: 0.01, max: 1.5, step: 0.01, unit: "s", default: 0.12 },
+      { id: "freerate", label: "Free Rate", min: 0, max: 20, step: 0.1, unit: "Hz", default: 0 },
+      { id: "glide", label: "Glide", min: 0, max: 0.5, step: 0.01, unit: "s", default: 0.06 },
+    ],
+  },
 };
 
 // Source gain: webdsp gives every instrument kind a shared "gain" control (dB, default 0 = unity)
@@ -572,9 +597,10 @@ export function createInstrument(kind: InstrumentKindId): TrackInstrument {
 
 /** The synth definition for `track`, or null for a sample/empty track or a kind this build
  * doesn't know (a project saved by a newer version) — callers treat null as "no synth". */
-/** Can this track's synth glide a tied note into the held one? (It has a Legato mode: Bass and FM.) */
+/** Can this track's synth glide a tied note into the held one? (It has a Legato mode, Bass and FM, or a
+ * Glide time, Wobble.) */
 export function supportsTie(track: Pick<Track, "instrument">): boolean {
-  return instrumentDefFor(track)?.params.some((p) => p.id === "legato") ?? false;
+  return instrumentDefFor(track)?.params.some((p) => p.id === "legato" || p.id === "glide") ?? false;
 }
 
 export function instrumentDefFor(track: Pick<Track, "instrument">): InstrumentDef | null {
