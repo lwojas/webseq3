@@ -132,6 +132,7 @@ export const StepGraph = memo(function StepGraph({ pitch, propId, patternId, not
 
   return (
     <div className="wx-graph">
+      <div className="wx-graph-gutter" style={{ height: height + 16 }} aria-hidden="true" />
       <div className="wx-graph-body" style={{ height }}>
         <div
           ref={ref}

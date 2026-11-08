@@ -202,16 +202,16 @@
 .wx-pip { font-style: normal; background: var(--amber); padding: 0 2px; border-radius: 1px; }
 .wx-resize { position: absolute; right: 0; top: 0; bottom: 0; cursor: ew-resize; z-index: 2; }
 .wx-pad.single .wx-resize { right: 0; left: auto; }
-.wx-playhead-layer { position: absolute; top: 0; bottom: 0; right: 0; pointer-events: none; z-index: 5; }
+.wx-playhead-layer { position: absolute; top: 0; bottom: 0; right: 0; pointer-events: none; z-index: 3; }
 .wx-playhead { position: absolute; top: 0; bottom: 0; left: 0; width: 1px; background: var(--accent); will-change: transform; }
 
 /* drawer under the selected track */
 .wx-row-group { display: block; }
 .wx-drawer { border-bottom: 1px solid var(--accent-dim); background: var(--panel); position: relative; }
-.wx-drawer .wx-panel-header { width: 100%; position: sticky; left: 0; background: color-mix(in srgb, var(--identity) 20%, var(--panel)); }
-.wx-drawer.maximised { position: sticky; left: 0; }
+.wx-drawer .wx-panel-header { width: 100%; position: sticky; left: 0; background: color-mix(in srgb, var(--identity) 20%, var(--panel)); z-index: 4; }
+.wx-drawer.maximised { position: sticky; left: 0; z-index: 4; }
 .wx-drawer-body { position: relative; }
-.wx-drawer-body.roll { display: flex; flex-direction: column; min-width: 0; position: sticky; left: 0; width: calc(100vw - var(--wx-library-w) - 2px); max-width: 100%; }
+.wx-drawer-body.roll { display: flex; flex-direction: column; min-width: 0; position: sticky; left: 0; z-index: 4; width: calc(100vw - var(--wx-library-w) - 2px); max-width: 100%; }
 .wx-panel-toggle.collapsed svg { transform: rotate(-90deg); }
 .wx-graph { position: relative; padding-left: var(--wx-head-w); }
 .wx-graph-body { overflow: visible; }
@@ -221,7 +221,8 @@
 .wx-graph-bar.mixed { background-image: repeating-linear-gradient(135deg, transparent 0 3px, color-mix(in srgb, var(--bg) 60%, transparent) 3px 5px); }
 .wx-graph-bar.selected { outline: 1px solid var(--text); }
 .wx-graph-zero { position: absolute; left: 0; right: 0; height: 1px; background: var(--border-strong); }
-.wx-graph-read { position: sticky; left: calc(var(--wx-head-w) + 8px); display: block; height: 16px; line-height: 16px; color: var(--text-dim); padding-left: 8px; }
+.wx-graph-gutter { float: left; position: sticky; left: 0; z-index: 4; width: var(--wx-head-w); margin-left: calc(-1 * var(--wx-head-w)); background: var(--panel); }
+.wx-graph-read { z-index: 4; position: sticky; left: calc(var(--wx-head-w) + 8px); display: block; height: 16px; line-height: 16px; color: var(--text-dim); padding-left: 8px; }
 
 /* piano roll (ported from V2) */
 .wx-roll { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
@@ -243,11 +244,11 @@
   :root { --wx-row-h: 40px; }
 }
 
-.wx-chord { display: flex; gap: 12px; align-items: flex-start; padding: 8px 8px 8px calc(var(--wx-head-w) + 8px); position: sticky; left: 0; flex-wrap: wrap; }
+.wx-chord { display: flex; gap: 12px; align-items: flex-start; padding: 8px 8px 8px calc(var(--wx-head-w) + 8px); position: sticky; left: 0; z-index: 4; flex-wrap: wrap; }
 .wx-chord .te-card { position: static; width: 220px; }
-.wx-drawer-hint { padding: 8px 8px 8px calc(var(--wx-head-w) + 8px); color: var(--text-dim); display: flex; gap: 8px; align-items: center; }
+.wx-drawer-hint { position: sticky; left: 0; z-index: 4; padding: 8px 8px 8px calc(var(--wx-head-w) + 8px); color: var(--text-dim); display: flex; gap: 8px; align-items: center; }
 .wx-chord .wx-drawer-hint { padding: 0; }
-.wx-auto-label { display: flex; align-items: center; gap: 10px; padding: 4px 0; color: var(--text-dim); }
+.wx-auto-label { position: sticky; left: var(--wx-head-w); z-index: 4; width: max-content; background: var(--panel); display: flex; align-items: center; gap: 10px; padding: 4px 0; color: var(--text-dim); }
 .wx-graph-bar.out { background: var(--amber); }
 .wx-cheat { align-items: stretch; min-width: 360px; max-height: 80vh; overflow: auto; }
 .wx-cheat h3 { margin: 8px 0 2px; font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-dim); font-weight: normal; }
