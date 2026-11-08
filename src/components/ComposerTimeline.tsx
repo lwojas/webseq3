@@ -430,9 +430,7 @@ function ComposerToolbar(
           +
         </button>
       </div>
-      <button className="btn small view-switch-btn" disabled={!p.hasSelection} title={needs ?? "Open this sequence in the sequencer"} onClick={p.onEdit}>
-        Edit Sequence ▸
-      </button>
+      {/* Opening a sequence is the Edit sequence icon in the shell's context bar (it sits beside the Edit menu). */}
       <button className="btn small" disabled={!p.hasSelection && !p.hasMarker} title={p.hasMarker ? "Play the song from the marker" : needs ?? "Play the song from the start of this sequence (set a marker to start anywhere)"} onClick={p.onPlayFromHere}>
         ▶ From here
       </button>

@@ -343,7 +343,6 @@ function ShellInner() {
       <div className="wx-contextbar" role="region" aria-label="Context actions">
         {workspace === "pattern" && (
           <>
-            {composer.editingSequence && <button className="wx-btn" onClick={composer.returnToComposer} title="Back to the Arrangement"><Icon name="back" /> {sequenceName(project, composer.editingSequence)}</button>}
             <button className="wx-icon-btn" onClick={() => c.handleStepPattern(-1)} aria-label="Previous pattern" title="Previous pattern  ["><Icon name="chevronLeft" /></button>
             <input className="wx-name" value={selectedPattern.name} onChange={(e) => c.renamePattern(selectedPatternId, e.target.value)} aria-label="Pattern name" title="Rename the pattern you are editing" />
             <button className="wx-icon-btn" onClick={() => c.handleStepPattern(1)} aria-label="Next pattern" title="Next pattern  ]"><Icon name="chevronRight" /></button>
@@ -362,7 +361,11 @@ function ShellInner() {
             )}
             <button className="wx-icon-btn" onClick={() => c.addPattern()} aria-label="New pattern" title="New pattern"><Icon name="plus" /></button>
             <button className="wx-icon-btn" onClick={() => c.duplicatePattern(selectedPatternId)} aria-label="Duplicate pattern" title="Duplicate this pattern and open the copy"><Icon name="copy" /></button>
-            <button className="wx-icon-btn" onClick={() => c.handleAddToComposer(selectedPatternId)} aria-label="Add to Arrange" title="Place this pattern on the Arrangement"><Icon name="arrangeAdd" /></button>
+            {composer.editingSequence ? (
+              <button className="wx-icon-btn" onClick={composer.returnToComposer} aria-label="Back to the arrangement" title={`Back to the arrangement (${sequenceName(project, composer.editingSequence)})`}><Icon name="arrangeBack" /></button>
+            ) : (
+              <button className="wx-icon-btn" onClick={() => c.handleAddToComposer(selectedPatternId)} aria-label="Add to Arrange" title="Place this pattern on the Arrangement"><Icon name="arrangeAdd" /></button>
+            )}
             <Popover label="Edit" title="Edit: copy and paste tracks, instruments, FX; bar tools" className="wx-btn" align="right" trigger={<><Icon name="pencil" /> Edit <Icon name="chevronDown" size={12} /></>}>
               {() => <EditMenu {...c.editProps} />}
             </Popover>
@@ -372,6 +375,7 @@ function ShellInner() {
           <>
             <span className="wx-crumb">{composer.sequence ? `${composer.lane?.name ?? ""} · ${sequenceName(project, composer.sequence)}` : "Select a clip; double-click to open its pattern"}</span>
             <span className="wx-spacer" />
+            <button className="wx-icon-btn" onClick={composer.toolbar.onEdit} disabled={!composer.toolbar.hasSelection} aria-label="Edit sequence" title={composer.toolbar.hasSelection ? "Edit this sequence's pattern (double-click a clip)" : "Select a clip to edit its pattern"}><Icon name="steps" /></button>
             <Popover label="Edit" title="Edit: the selected clip and lane, history" className="wx-btn" align="right" trigger={<><Icon name="pencil" /> Edit <Icon name="chevronDown" size={12} /></>}>
               {() => <EditMenu {...c.editProps} />}
             </Popover>

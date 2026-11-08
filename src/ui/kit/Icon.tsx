@@ -43,6 +43,7 @@ const P = {
   arrangeAdd: "M2.5 4h5v2.5h-5zM2.5 9.5h5V12h-5zM11 6.5v5M8.5 9h5",
   settings: "M3 5h4M10 5h3M3 11h2M8 11h5M8.5 3.5v3M6.5 9.5v3",
   more: "M4 8v.01M8 8v.01M12 8v.01",
+  arrangeBack: "M7 4h6.5v2.5H7zM7 8.5h6.5V11H7zM7 13h3.5M4.5 4.5L2.5 7l2 2.5",
   back: "M7 4L3.5 7.5 7 11M3.5 7.5h6.5a3 3 0 010 6H8",
   maximise: "M3 6.5V3h3.5M13 6.5V3H9.5M3 9.5V13h3.5M13 9.5V13H9.5",
   restore: "M6.5 3v3.5H3M9.5 3v3.5H13M6.5 13V9.5H3M9.5 13V9.5H13",
