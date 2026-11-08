@@ -7,7 +7,7 @@ import { effectiveSampleMode, sliceCount } from "../../model/chop";
 import { rootMidiNote } from "../../model/instruments";
 import { MAX_NOTE_PITCH } from "../../model/notes";
 import { rollCopyNotes, type CopiedRollNote } from "../../model/roll";
-import { isChromatic, isOffsetInScale } from "../../model/scale";
+import { buildRollRows, inKey, pitchAfterRows, pitchAtRow, rollKey, rowOf, snapToKey, stepPitch } from "./rollRows";
 import { chordLabel } from "../../components/TrackEditor";
 import { chordMidis } from "../../model/chord";
 import { useAnnounce } from "../kit/a11y";
@@ -47,7 +47,7 @@ function chordRows(n: Note, scale: Parameters<typeof chordMidis>[0], root: numbe
 }
 
 type Drag =
-  | { kind: "move"; ids: NoteId[]; x: number; y: number; dBeats: number; dPitch: number }
+  | { kind: "move"; ids: NoteId[]; x: number; y: number; dBeats: number; dRows: number }
   | { kind: "resize"; id: NoteId; x: number; dur: number }
   | { kind: "draw"; start: number; pitch: number; x: number; y: number; dur: number; moved: boolean }
   | { kind: "marquee"; x0: number; y0: number; x1: number; y1: number }
@@ -105,7 +105,14 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     }
     return { pMax: Math.min(MAX_NOTE_PITCH + 12, hi), pMin: Math.max(-MAX_NOTE_PITCH - 12, lo) };
   }, [notes, chop, slices, scale, root, base]);
-  const rows = pMax - pMin + 1;
+  // Rows follow the key: in a non-chromatic project only its notes (and the rows existing notes already sit on) are drawn and reachable.
+  const key = useMemo(() => rollKey(scale, root, chop), [scale, root, chop]);
+  const grid = useMemo(() => {
+    const used: number[] = [];
+    if (!chop) for (const n of notes) used.push(...chordRows(n, scale, root, base));
+    return buildRollRows(key, pMin, pMax, used);
+  }, [key, pMin, pMax, chop, notes, scale, root, base]);
+  const rows = grid.pitches.length;
 
   const say = useAnnounce();
   const hintId = useId();
@@ -120,8 +127,8 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
   const lastDur = useRef(1);
   const colors = useRef<Colors | null>(null);
   const frame = useRef(0);
-  const live = useRef({ keysW: KEYS_W, sl: (() => 0) as () => number, notes, selection, ppb, pMax, pMin, totalBeats, base, chop, slices, scale, root, clip, bpb, snap });
-  live.current = { keysW: KEYS_W, sl: () => (linked ? linked.scroll.get() : scrollRef.current?.scrollLeft ?? 0), notes, selection, ppb, pMax, pMin, totalBeats, base, chop, slices, scale, root, clip, bpb, snap };
+  const live = useRef({ keysW: KEYS_W, sl: (() => 0) as () => number, notes, selection, ppb, pMax, pMin, totalBeats, base, chop, slices, scale, root, clip, bpb, snap, key, grid });
+  live.current = { keysW: KEYS_W, sl: () => (linked ? linked.scroll.get() : scrollRef.current?.scrollLeft ?? 0), notes, selection, ppb, pMax, pMin, totalBeats, base, chop, slices, scale, root, clip, bpb, snap, key, grid };
   const pendingAdd = useRef<Set<NoteId> | null>(null);
   // Where Paste puts notes: the last place clicked in the grid (then after what was pasted, so repeated pastes lay end to end).
   const cursor = useRef(0);
@@ -134,7 +141,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     const el = scrollRef.current;
     const canvas = canvasRef.current;
     if (!el || !canvas) return;
-    const { notes, selection, ppb, pMax, pMin, totalBeats, base, chop, scale, root, clip, bpb, keysW: KEYS_W } = live.current;
+    const { notes, selection, ppb, totalBeats, base, chop, scale, root, clip, bpb, key, grid, keysW: KEYS_W } = live.current;
     const w = el.clientWidth;
     const h = el.clientHeight;
     const dpr = window.devicePixelRatio || 1;
@@ -153,18 +160,18 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     const sl = live.current.sl();
     const st = el.scrollTop;
     const d = drag.current;
-    const yOf = (pitch: number) => RULER_H + (pMax - pitch) * ROW_H - st;
+    const yOf = (pitch: number) => RULER_H + rowOf(grid, pitch) * ROW_H - st;
     const xOf = (beat: number) => KEYS_W + beat * ppb - sl;
     const firstRow = Math.max(0, Math.floor((st - 0) / ROW_H));
-    const lastRow = Math.min(pMax - pMin, Math.ceil((st + h) / ROW_H));
+    const lastRow = Math.min(grid.pitches.length - 1, Math.ceil((st + h) / ROW_H));
 
     // rows
     for (let r = firstRow; r <= lastRow; r++) {
-      const pitch = pMax - r;
+      const pitch = grid.pitches[r];
       const y = yOf(pitch);
       const midi = base + pitch;
       const black = !chop && BLACK.has(((midi % 12) + 12) % 12);
-      const out = !chop && !isChromatic(scale) && !isOffsetInScale(scale, root, pitch);
+      const out = !inKey(key, pitch);
       ctx.fillStyle = black ? col.rowBlack : col.row;
       ctx.fillRect(KEYS_W, y, w - KEYS_W, ROW_H);
       if (out) {
@@ -193,7 +200,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
 
     // notes
     const preview = (n: Note): { start: number; dur: number; pitch: number } => {
-      if (d?.kind === "move" && d.ids.includes(n.id)) return { start: n.start + d.dBeats, dur: n.duration, pitch: n.chord ? chordRows(n, scale, root, base)[0] : (n.pitch ?? 0) + d.dPitch };
+      if (d?.kind === "move" && d.ids.includes(n.id)) return { start: n.start + d.dBeats, dur: n.duration, pitch: n.chord ? chordRows(n, scale, root, base)[0] : pitchAfterRows(key, grid, n.pitch ?? 0, d.dRows) };
       if (d?.kind === "resize" && d.id === n.id) return { start: n.start, dur: d.dur, pitch: n.pitch ?? 0 };
       return { start: n.start, dur: n.duration, pitch: n.chord ? chordRows(n, scale, root, base)[0] : (n.pitch ?? 0) };
     };
@@ -260,7 +267,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     ctx.fillStyle = col.bg;
     ctx.fillRect(0, 0, KEYS_W, h);
     for (let r = firstRow; r <= lastRow; r++) {
-      const pitch = pMax - r;
+      const pitch = grid.pitches[r];
       const y = yOf(pitch);
       const midi = base + pitch;
       const pc = ((midi % 12) + 12) % 12;
@@ -272,7 +279,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
       if (chop) {
         ctx.fillStyle = col.text;
         ctx.fillText(`Slice ${pitch + 1}`, KEYS_W - 58 + 6, y + ROW_H / 2);
-      } else if (pc === 0 || pitch === 0) {
+      } else if (key.keyed || pc === 0 || pitch === 0) {
         ctx.fillStyle = isBlack ? col.text : "#10151d";
         ctx.fillText(`${NAMES[pc]}${Math.floor(midi / 12) - 1}${pitch === 0 ? " ●" : ""}`, KEYS_W - 58 + 6, y + ROW_H / 2);
       }
@@ -364,7 +371,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     if (!el) return;
     const ps = notes.length ? notes.map((n) => n.pitch ?? 0) : [0];
     const mid = (Math.max(...ps) + Math.min(...ps)) / 2;
-    el.scrollTop = Math.max(0, RULER_H + (pMax - mid) * ROW_H - el.clientHeight / 2);
+    el.scrollTop = Math.max(0, RULER_H + rowOf(live.current.grid, Math.round(mid)) * ROW_H - el.clientHeight / 2);
     el.scrollLeft = 0;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clip.id, track.id]);
@@ -393,7 +400,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
   const toPitch = (clientY: number) => {
     const el = scrollRef.current!;
     const row = Math.floor((clientY - el.getBoundingClientRect().top - RULER_H + el.scrollTop) / ROW_H);
-    return clamp(live.current.pMax - row, live.current.pMin, live.current.pMax);
+    return pitchAtRow(live.current.grid, row);
   };
   const snapTo = (beats: number, mode: "round" | "floor" = "round") => {
     const s = live.current.snap;
@@ -436,13 +443,13 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
         if (!sel.has(h.note.id)) onSelection(ids);
       }
       if (!h.note.chord) audition(h.note.pitch ?? 0);
-      drag.current = h.edge ? { kind: "resize", id: h.note.id, x: e.clientX, dur: h.note.duration } : { kind: "move", ids, x: e.clientX, y: e.clientY, dBeats: 0, dPitch: 0 };
+      drag.current = h.edge ? { kind: "resize", id: h.note.id, x: e.clientX, dur: h.note.duration } : { kind: "move", ids, x: e.clientX, y: e.clientY, dBeats: 0, dRows: 0 };
     } else if (e.shiftKey) {
       drag.current = { kind: "marquee", x0: px, y0: py, x1: px, y1: py };
     } else {
       onSelection([]);
       const start = clamp(snapTo(beat, "floor"), 0, live.current.totalBeats - live.current.snap);
-      drag.current = { kind: "draw", start, pitch, x: e.clientX, y: e.clientY, dur: Math.max(live.current.snap, lastDur.current), moved: false };
+      drag.current = { kind: "draw", start, pitch: snapToKey(live.current.key, pitch), x: e.clientX, y: e.clientY, dur: Math.max(live.current.snap, lastDur.current), moved: false };
     }
     invalidate();
   };
@@ -452,7 +459,7 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     const { ppb, notes } = live.current;
     if (d.kind === "move") {
       d.dBeats = snapTo((e.clientX - d.x) / ppb);
-      d.dPitch = -Math.round((e.clientY - d.y) / ROW_H);
+      d.dRows = -Math.round((e.clientY - d.y) / ROW_H);
     } else if (d.kind === "resize") {
       const n = notes.find((x) => x.id === d.id);
       if (n) d.dur = Math.max(live.current.snap, snapTo(toBeat(e.clientX) - n.start));
@@ -466,12 +473,29 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
     }
     invalidate();
   };
+  // Moves notes in time and, per note, by the pitch change `dPitchOf` gives it: each note lands on a key pitch of its own, so
+  // notes with different deltas are moved in groups inside one undo step.
+  const moveNotes = (ids: readonly NoteId[], dStart: number, dPitchOf: (n: Note) => number, resolution = live.current.snap) => {
+    const groups = new Map<number, NoteId[]>();
+    for (const id of ids) {
+      const n = live.current.notes.find((x) => x.id === id);
+      if (!n) continue;
+      const dp = n.chord ? 0 : dPitchOf(n);
+      groups.set(dp, [...(groups.get(dp) ?? []), id]);
+    }
+    const actions: Action[] = [...groups].map(([dPitch, noteIds]) => ({ type: "ROLL_MOVE_NOTES", patternId: pattern.id, noteIds, dStart, dPitch, resolution }));
+    if (actions.length) dispatch(actions.length === 1 ? actions[0] : { type: "BATCH", actions });
+  };
+
   const up = () => {
     const d = drag.current;
     drag.current = null;
     if (!d) return;
     const pid = pattern.id;
-    if (d.kind === "move" && (d.dBeats !== 0 || d.dPitch !== 0)) dispatch({ type: "ROLL_MOVE_NOTES", patternId: pid, noteIds: d.ids, dStart: d.dBeats, dPitch: d.dPitch, resolution: live.current.snap });
+    if (d.kind === "move" && (d.dBeats !== 0 || d.dRows !== 0)) {
+      const { key, grid } = live.current;
+      moveNotes(d.ids, d.dBeats, (n) => pitchAfterRows(key, grid, n.pitch ?? 0, d.dRows) - (n.pitch ?? 0));
+    }
     else if (d.kind === "resize") {
       const n = live.current.notes.find((x) => x.id === d.id);
       if (n && d.dur !== n.duration) { lastDur.current = d.dur; dispatch({ type: "ROLL_RESIZE_NOTE", patternId: pid, noteId: d.id, duration: d.dur, resolution: live.current.snap }); }
@@ -481,13 +505,13 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
       dispatch({ type: "ROLL_ADD_NOTE", patternId: pid, trackId: track.id, start: d.start, pitch: d.pitch, duration: d.dur, velocity: 0.8, resolution: live.current.snap });
       audition(d.pitch);
     } else if (d.kind === "marquee") {
-      const { ppb, pMax } = live.current;
+      const { ppb, grid } = live.current;
       const el = scrollRef.current!;
       const x0 = Math.min(d.x0, d.x1), x1 = Math.max(d.x0, d.x1), y0 = Math.min(d.y0, d.y1), y1 = Math.max(d.y0, d.y1);
       const picked = live.current.notes.filter((n) => {
         const nx0 = KEYS_W + n.start * ppb - live.current.sl();
         const nx1 = nx0 + n.duration * ppb;
-        const ny0 = RULER_H + (pMax - (n.chord ? chordRows(n, live.current.scale, live.current.root, live.current.base)[0] : (n.pitch ?? 0))) * ROW_H - el.scrollTop;
+        const ny0 = RULER_H + rowOf(grid, (n.chord ? chordRows(n, live.current.scale, live.current.root, live.current.base)[0] : (n.pitch ?? 0))) * ROW_H - el.scrollTop;
         return nx1 >= x0 && nx0 <= x1 && ny0 + ROW_H >= y0 && ny0 <= y1;
       }).map((n) => n.id);
       onSelection([...new Set([...live.current.selection, ...picked])]);
@@ -574,20 +598,21 @@ export const PianoRoll = memo(function PianoRoll({ linked, dispatch, beatsPerBar
       cursor.current = n.start;
       say(`Note ${to + 1} of ${ordered.length}, step ${Math.floor(n.start) + 1}, ${n.chord ? "chord" : `pitch ${n.pitch ?? 0}`}, length ${n.duration}`);
     } else if (e.key === "Enter" && !sel.length) {
-      // Enter with nothing selected adds a note at the cursor (the last place chosen, or the start), at the track's own pitch.
+      // Enter with nothing selected adds a note at the cursor (the last place chosen, or the start), at the track's own pitch (the nearest note of the key).
       e.preventDefault();
       const start = clamp(snapTo(cursor.current, "floor"), 0, live.current.totalBeats - live.current.snap);
       pendingAdd.current = new Set(live.current.notes.map((n) => n.id));
-      dispatch({ type: "ROLL_ADD_NOTE", patternId: pid, trackId: track.id, start, pitch: 0, duration: lastDur.current, velocity: 0.8, resolution: live.current.snap });
+      dispatch({ type: "ROLL_ADD_NOTE", patternId: pid, trackId: track.id, start, pitch: snapToKey(live.current.key, 0), duration: lastDur.current, velocity: 0.8, resolution: live.current.snap });
       say(`Note added at step ${Math.floor(start) + 1}. Arrow keys move it, Shift with Up or Down moves an octave.`);
     } else if (e.key === "Escape") {
       onSelection([]);
     } else if (sel.length && (e.key === "ArrowLeft" || e.key === "ArrowRight")) {
       e.preventDefault();
-      dispatch({ type: "ROLL_MOVE_NOTES", patternId: pid, noteIds: sel, dStart: (e.key === "ArrowRight" ? 1 : -1) * live.current.snap, dPitch: 0, resolution: live.current.snap });
+      moveNotes(sel, (e.key === "ArrowRight" ? 1 : -1) * live.current.snap, () => 0);
     } else if (sel.length && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
       e.preventDefault();
-      dispatch({ type: "ROLL_MOVE_NOTES", patternId: pid, noteIds: sel, dStart: 0, dPitch: (e.key === "ArrowUp" ? 1 : -1) * (e.shiftKey ? 12 : 1) });
+      const { key } = live.current;
+      moveNotes(sel, 0, (n) => stepPitch(key, n.pitch ?? 0, e.key === "ArrowUp" ? 1 : -1, e.shiftKey) - (n.pitch ?? 0), 1);
     }
   };
 

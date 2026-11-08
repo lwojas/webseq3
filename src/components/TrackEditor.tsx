@@ -5,7 +5,7 @@ import { hasPatternSettings, trackInPattern } from "../model/patternSettings";
 import { TrackLfoPanel } from "./TrackLfoPanel";
 import { ArpPanel } from "./ArpPanel";
 import { arpOf, type ArpVelocity, type TrackArp } from "../model/arp";
-import { chordMidis, chordRootOptions, chordType, chordTypeId, chordTypePatch, maxInversion, midiNoteName, CHORD_SHAPES, CHORD_TYPES, type ChordVoicing, type NoteChord } from "../model/chord";
+import { chordFitsScale, chordMidis, chordRootOptions, chordType, chordTypeId, chordTypePatch, maxInversion, midiNoteName, CHORD_SHAPES, CHORD_TYPES, type ChordVoicing, type NoteChord } from "../model/chord";
 import { degreeOfIndex } from "../model/scaleDegrees";
 import { getScaleDegree, isChromatic, isOffsetInScale, referenceMidi, type ProjectScale } from "../model/scale";
 import { RATCHET_VALUES, notesForTrack, ratchetOf, totalBeats, trackHasSource } from "../model/types";
@@ -117,14 +117,19 @@ interface ChordFieldsProps {
   /** The track's root as a MIDI note (see rootMidiNote); null for a sample. */
   root: number | null;
   scale: ProjectScale;
+  /** Offer only roots and chord types whose every tone is in the project's key (the graph editor).
+   * The chord's current root and type always stay listed, so an existing chord is never hidden. */
+  keyOnly?: boolean;
   onSetNoteChord: (noteId: NoteId, patch: Partial<NoteChord>) => void;
   onRemoveNote: (noteId: NoteId) => void;
 }
 
 /** Chord mode's fields, in the same card as Note mode: the root (scale notes only — a chord is
  * built from the key), how many scale steps it stacks, and what that resolves to right now. */
-export function ChordFields({ note, chord, root, scale, onSetNoteChord, onRemoveNote }: ChordFieldsProps) {
-  const roots = chordRootOptions(scale, root);
+export function ChordFields({ note, chord, root, scale, keyOnly = false, onSetNoteChord, onRemoveNote }: ChordFieldsProps) {
+  const fits = (patch: Partial<NoteChord>) => !keyOnly || chordFitsScale(scale, root, { ...chord, ...patch });
+  const currentType = chordTypeId(chord);
+  const roots = chordRootOptions(scale, root).filter((r) => r.index === chord.root || fits({ root: r.index }));
   const rootsWithCurrent = roots.some((r) => r.index === chord.root) ? roots : [...roots, { index: chord.root, midi: chordMidis(scale, root, { root: chord.root, degrees: [0] })[0] }].sort((a, b) => a.index - b.index);
   const shapeId = chordTypeId(chord);
   const tones = chordMidis(scale, root, chord).map(midiNoteName);
@@ -157,7 +162,7 @@ export function ChordFields({ note, chord, root, scale, onSetNoteChord, onRemove
         title="Chord type — what notes make up the chord. Named types keep their quality in any scale; In scale stacks every second note of the project scale."
       >
         <optgroup label="Chord">
-          {CHORD_TYPES.map((t) => (
+          {CHORD_TYPES.filter((t) => t.id === currentType || fits(chordTypePatch(t.id) ?? {})).map((t) => (
             <option key={t.id} value={t.id}>
               {t.label}
             </option>

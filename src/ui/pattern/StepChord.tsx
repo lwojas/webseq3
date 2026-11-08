@@ -30,7 +30,7 @@ export const StepChord = memo(function StepChord({ notes, root, scale, onSetNote
           </div>
           {note.chord ? (
             <>
-              <ChordFields note={note} chord={note.chord} root={root} scale={scale} onSetNoteChord={onSetNoteChord} onRemoveNote={onRemoveNote} />
+              <ChordFields note={note} chord={note.chord} root={root} scale={scale} keyOnly onSetNoteChord={onSetNoteChord} onRemoveNote={onRemoveNote} />
               <button className="wx-btn" onClick={() => onExplode(note.id)} title="Replace this chord by its individual notes, which you can then edit in the piano roll">Explode to notes</button>
             </>
           ) : (

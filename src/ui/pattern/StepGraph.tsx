@@ -43,8 +43,8 @@ export const StepGraph = memo(function StepGraph({ pitch, propId, patternId, not
 
   const bars = [...cells.values()].filter((c) => c.kind !== "tail");
   const isPitch = propId === "pitch";
-  // Painting a pitch lands on a note the track offers (only the key's notes while Snap is on), never on a value V1 would not show.
-  const allowed = useMemo(() => (isPitch ? pitchOptions(pitch.root, 0, pitch.slices, pitch.scale) : []), [isPitch, pitch.root, pitch.slices, pitch.scale]);
+  // Painting a pitch lands on a note the track offers (only the key's notes, whatever Snap says), never on a value V1 would not show.
+  const allowed = useMemo(() => (isPitch ? pitchOptions(pitch.root, 0, pitch.slices, pitch.scale, true) : []), [isPitch, pitch.root, pitch.slices, pitch.scale]);
   const nearest = (v: number) => (allowed.length ? allowed.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a)) : v);
   const text = (v: number) => (isPitch ? pitchLabel(v, pitch.root, pitch.slices, pitch.scale).replace(/^● /, "") : prop.format(v));
   const outOfKey = (v: number) => isPitch && pitch.slices === null && !isChromatic(pitch.scale) && !isOffsetInScale(pitch.scale, pitch.root, v);

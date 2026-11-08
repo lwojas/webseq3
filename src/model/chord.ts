@@ -28,7 +28,7 @@
 import { effectiveSampleMode } from "./chop";
 import { rootMidiNote } from "./instruments";
 import { MAX_NOTE_PITCH, MIN_NOTE_PITCH } from "./notes";
-import { referenceMidi, scaleOf, type ProjectScale } from "./scale";
+import { isChromatic, isNoteInScale, referenceMidi, scaleOf, type ProjectScale } from "./scale";
 import { ladderMidi, ladderSize, nearestLadderIndex, tonicAtOrBelow } from "./scaleDegrees";
 import type { Note, NoteId, PatternId, Project, Track } from "./types";
 
@@ -272,6 +272,12 @@ export function chordRootOptions(ctx: ProjectScale, trackRoot: number | null): {
     out.push({ index: k, midi });
   }
   return out;
+}
+
+/** True when every tone of `chord` (any type, inversion and voicing) is a note of the project scale.
+ * Always true for a chromatic project. Pitch classes only, so the octave never matters. */
+export function chordFitsScale(ctx: ProjectScale, trackRoot: number | null, chord: NoteChord): boolean {
+  return isChromatic(ctx) || chordMidis(ctx, trackRoot, chord).every((m) => isNoteInScale(ctx, m));
 }
 
 const NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
