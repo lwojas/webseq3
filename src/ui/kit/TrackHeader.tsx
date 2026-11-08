@@ -40,7 +40,6 @@ export const TrackHeader = memo(function TrackHeader(p: TrackHeaderProps) {
       aria-current={p.selected ? "true" : undefined}
       aria-label={`Track ${number} ${p.name}`}
     >
-      <span className="wx-identity" aria-hidden />
       <span className="wx-track-num">{number}</span>
       <span className="wx-track-name" title={p.name}>{p.name}</span>
       <span className="wx-track-src" role="img" title={SOURCE_LABEL[p.source]} aria-label={SOURCE_LABEL[p.source]}><Icon name={GLYPH[p.source]} size={12} /></span>

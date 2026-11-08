@@ -156,7 +156,8 @@
 .wx-ruler-track { position: relative; flex: none; }
 .wx-ruler-bar { position: absolute; top: 0; bottom: 0; padding-left: 4px; line-height: 18px; color: var(--text-dim); border-left: 1px solid var(--border-strong); font-variant-numeric: tabular-nums; }
 .wx-row { display: flex; height: var(--wx-row-h); border-bottom: 1px solid var(--wx-hairline); background: var(--wx-lane); }
-.wx-row.selected { background: var(--wx-lane-selected); }
+/* the selected track: its whole row is tinted in the track's colour and framed top and bottom */
+.wx-row.selected { background: color-mix(in srgb, var(--identity) 10%, var(--bg)); box-shadow: inset 0 1px 0 color-mix(in srgb, var(--identity) 65%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--identity) 65%, transparent); }
 .wx-row.notes-off .wx-cells { opacity: 0.45; }
 .wx-row-head { flex: none; position: sticky; left: 0; z-index: 4; background: inherit; border-right: 1px solid var(--wx-hairline); }
 .wx-cells {
@@ -172,12 +173,14 @@
 }
 .wx-empty-hint { position: absolute; left: 8px; top: 0; line-height: var(--wx-row-h); color: var(--text-dim); pointer-events: none; white-space: nowrap; position: sticky; }
 
-.wx-track-header { display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 4px 0 0; position: relative; cursor: default; }
-.wx-track-header .wx-identity { width: 3px; align-self: stretch; background: var(--identity); flex: none; }
-.wx-track-header.selected { box-shadow: inset -2px 0 0 var(--accent); }
+/* each track's colour is a knocked-back fill of its header; selecting the track brings the fill up */
+.wx-track-header { display: flex; align-items: center; gap: 4px; height: 100%; padding: 0 4px 0 8px; position: relative; cursor: default; background: color-mix(in srgb, var(--identity) 12%, var(--panel)); }
+.wx-track-header.selected { background: color-mix(in srgb, var(--identity) 46%, var(--panel)); }
+.wx-track-header.selected .wx-track-num, .wx-track-header.selected .wx-track-src { color: var(--text); }
+.wx-track-header.selected .wx-ms:not(.on) { color: var(--text); border-color: color-mix(in srgb, var(--identity) 55%, var(--border-strong)); }
 .wx-track-num { color: var(--text-dim); font-variant-numeric: tabular-nums; width: 18px; text-align: right; }
 .wx-track-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.wx-track-header.selected .wx-track-name { color: var(--accent); }
+.wx-track-header.selected .wx-track-name { color: var(--text); font-weight: 600; }
 .wx-track-src { color: var(--text-dim); width: 14px; text-align: center; }
 .wx-ms { background: transparent; border: 1px solid var(--border); border-radius: 3px; color: var(--text-dim); width: 20px; height: 20px; padding: 0; cursor: pointer; font-size: 10px; }
 .wx-ms:hover { border-color: var(--border-strong); color: var(--text); }
@@ -205,12 +208,12 @@
 /* drawer under the selected track */
 .wx-row-group { display: block; }
 .wx-drawer { border-bottom: 1px solid var(--accent-dim); background: var(--panel); position: relative; }
-.wx-drawer .wx-panel-header { border-left: 3px solid var(--identity); width: 100%; position: sticky; left: 0; }
+.wx-drawer .wx-panel-header { width: 100%; position: sticky; left: 0; background: color-mix(in srgb, var(--identity) 20%, var(--panel)); }
 .wx-drawer.maximised { position: sticky; left: 0; }
 .wx-drawer-body { position: relative; }
 .wx-drawer-body.roll { display: flex; flex-direction: column; min-width: 0; position: sticky; left: 0; width: calc(100vw - var(--wx-library-w) - 2px); max-width: 100%; }
 .wx-drawer-closed { border-bottom: 1px solid var(--wx-hairline); background: var(--bg); }
-.wx-drawer-closed .wx-panel-header { background: var(--bg); }
+.wx-drawer-closed .wx-panel-header { background: color-mix(in srgb, var(--identity) 12%, var(--bg)); }
 .wx-panel-toggle.collapsed svg { transform: rotate(-90deg); }
 .wx-drawer-open { background: transparent; border: 0; color: var(--text-dim); cursor: pointer; padding: 0 6px; height: 20px; margin-left: 6px; }
 .wx-drawer-open:hover { color: var(--accent); }

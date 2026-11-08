@@ -8,7 +8,7 @@ import { useStableTrackNotes } from "../../hooks/useStableTrackNotes";
 import { effectiveSampleMode } from "../../model/chop";
 import { isTrackOffInPattern } from "../../model/patternSettings";
 import { totalBeats, type Note, type NoteId, type Pattern, type Track, type TrackId } from "../../model/types";
-import { TrackHeader } from "../kit/TrackHeader";
+import { TrackHeader, trackColor } from "../kit/TrackHeader";
 import { useAnnounce } from "../kit/a11y";
 import { columnOf, notesAtColumn, stepCells } from "./stepView";
 
@@ -168,7 +168,7 @@ const StepRow = memo(function StepRow(p: RowProps) {
 
   const label = trackHasSourceLabel(track);
   return (
-    <div className={`wx-row ${p.selected ? "selected" : ""} ${isTrackOffInPattern(p.pattern, track.id) ? "notes-off" : ""}`}>
+    <div className={`wx-row ${p.selected ? "selected" : ""} ${isTrackOffInPattern(p.pattern, track.id) ? "notes-off" : ""}`} style={{ ["--identity" as string]: trackColor(p.index) }}>
       <div className="wx-row-head" style={{ width: HEAD }}>
         <TrackHeader
           id={track.id}
