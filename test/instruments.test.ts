@@ -5,7 +5,7 @@ import { instrumentHostFor } from "../src/audio/instruments";
 import { compileInstrumentNotes, compileNote } from "../src/audio/compile";
 import { Playback } from "../src/audio/playback";
 import { createInitialProject, assignAsset, addAsset, addNote, setNotePitch } from "../src/model/project";
-import { INSTRUMENT_DEFS, MAX_TRACK_LFOS, addInstrumentLfo, removeInstrumentLfo, rootMidiNote, setInstrumentLfo, setInstrumentParam, setTrackInstrument } from "../src/model/instruments";
+import { INSTRUMENT_DEFS, MAX_TRACK_LFOS, instrumentHasEdits, addInstrumentLfo, removeInstrumentLfo, rootMidiNote, setInstrumentLfo, setInstrumentParam, setTrackInstrument } from "../src/model/instruments";
 import { pasteTrackConfig, copyTrackConfig } from "../src/model/trackConfig";
 import { INSTRUMENT_PARAM_NAMES, mockRuntime } from "./mockRuntime";
 import type { InstrumentKindId } from "../src/model/types";
@@ -400,5 +400,18 @@ describe("instrument LFO modulation slots", () => {
     project = addInstrumentLfo(project, "track-1", "attack"); // not a modulation target in the mock
     syncBuses(runtime, project, buses);
     expect(calls.setInstrumentLfo).toEqual([]);
+  });
+});
+
+describe("instrumentHasEdits", () => {
+  it("is false for a fresh synth, true after a control moves or an LFO is added", () => {
+    let project = setTrackInstrument(createInitialProject(), "track-1", "kick");
+    expect(instrumentHasEdits(project.tracks[0])).toBe(false);
+    const param = INSTRUMENT_DEFS.kick.params[0];
+    const edited = setInstrumentParam(project, "track-1", param.id, param.default === param.max ? param.min : param.max);
+    expect(instrumentHasEdits(edited.tracks[0])).toBe(true);
+    project = addInstrumentLfo(project, "track-1", param.id);
+    expect(instrumentHasEdits(project.tracks[0])).toBe(true);
+    expect(instrumentHasEdits({ instrument: null })).toBe(false);
   });
 });

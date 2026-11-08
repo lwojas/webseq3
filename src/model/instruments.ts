@@ -611,6 +611,16 @@ export function setTrackInstrument(project: Project, trackId: TrackId, kind: Ins
   });
 }
 
+/** Has the user changed this track's synth from a fresh instance of its kind (any control moved, or
+ * an LFO added)? Switching kind or source throws that work away, so the UI asks first. */
+export function instrumentHasEdits(track: Pick<Track, "instrument">): boolean {
+  const inst = track.instrument;
+  if (!inst) return false;
+  if (inst.lfos?.length) return true;
+  const defaults = defaultInstrumentParams(inst.kind);
+  return Object.entries(inst.params).some(([id, v]) => id in defaults && defaults[id] !== v);
+}
+
 export function setInstrumentParam(project: Project, trackId: TrackId, paramId: string, value: number): Project {
   return updateTrack(project, trackId, (t) => {
     if (!t.instrument) return t;

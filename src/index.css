@@ -1644,6 +1644,10 @@ select {
   gap: 6px;
 }
 
+.track-mode-end {
+  margin-left: auto;
+}
+
 .track-mode-label {
   color: var(--text-dim);
   text-transform: uppercase;

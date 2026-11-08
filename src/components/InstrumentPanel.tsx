@@ -102,6 +102,12 @@ const ENVELOPE_FIELDS: { id: keyof SampleEnvelope; label: string; max: number; s
  * here: they belong to the Track Editor, which edits the steps themselves. */
 const CHOKE_GROUP_COUNT = 8;
 
+const KIND_GROUPS: { category: InstrumentDef["category"]; label: string }[] = [
+  { category: "drum", label: "Drums" },
+  { category: "bass", label: "Bass" },
+  { category: "synth", label: "Synths" },
+];
+
 /** Group numbers offered in the Choke Group select: 1..8, plus the track's current group when a
  * project holds a larger one, so the select never shows a value it cannot represent. */
 function chokeGroupOptions(current: number | null): number[] {
@@ -134,9 +140,8 @@ function SynthPanel({ def, synth, trackId, badges, modulation, automation, onSet
   const cellDefault = useCallback((id: string) => cellDefaults.get(id) ?? 0, [cellDefaults]);
   return (
     <div className="module-panel">
-      <div className="module-panel-header">
-        <span className="name">{def.label}</span>
-        {hasMatrix && (
+      {hasMatrix && (
+        <div className="module-panel-header">
           <div className="track-mode-toggle" role="tablist" aria-label={`${def.label} view`}>
             {(["controls", "matrix"] as const).map((v) => (
               <button key={v} role="tab" aria-selected={view === v} className={view === v ? "active" : ""} onClick={() => setView(v)}>
@@ -144,8 +149,8 @@ function SynthPanel({ def, synth, trackId, badges, modulation, automation, onSet
               </button>
             ))}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {showMatrix ? (
         <PatchMatrixEditor
           params={synth.params}
@@ -246,43 +251,47 @@ export function InstrumentPanel({
     <div className="fx-panel instrument-panel">
       <div className="fx-panel-head">
         <div className="fx-panel-title">{track.name} — INSTRUMENT</div>
-        <div className="fx-panel-head-controls">
-          <div className="track-mode-group">
-            <span className="track-mode-label">Source</span>
-            <div className="track-mode-toggle">
-              <button className={synth ? "" : "active"} onClick={() => onSetInstrument(track.id, null)} title="Play a loaded sample">
-                Sample
-              </button>
-              <button
-                className={synth ? "active" : ""}
-                onClick={() => onSetInstrument(track.id, synth ? synth.kind : "kick")}
-                title="Play a built-in synthesized instrument"
-              >
-                Synth
-              </button>
-            </div>
-          </div>
-          <div className="track-mode-group">
-            <label className="track-mode-label" htmlFor={`choke-group-${track.id}`}>Choke Group</label>
-            <select
-              id={`choke-group-${track.id}`}
-              className="fx-add-select"
-              value={effectiveChokeGroup(track) ?? ""}
-              onChange={(e) => onSetChokeGroup(track.id, e.target.value === "" ? null : Number(e.target.value))}
-              title="Tracks in the same group cut each other off (e.g. open and closed hi-hat)"
+        <div className="track-mode-group">
+          <span className="track-mode-label">Source</span>
+          <div className="track-mode-toggle">
+            <button className={synth ? "" : "active"} aria-pressed={!synth} onClick={() => !!synth && onSetInstrument(track.id, null)} title="Play a loaded sample">
+              Sample
+            </button>
+            <button
+              className={synth ? "active" : ""}
+              aria-pressed={!!synth}
+              onClick={() => !synth && onSetInstrument(track.id, "kick")}
+              title="Play a built-in synthesized instrument"
             >
-              <option value="">None</option>
-              {chokeGroupOptions(effectiveChokeGroup(track)).map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
+              Synth
+            </button>
           </div>
         </div>
       </div>
 
       <div className="track-mode-row">
+        {synth && (
+          <div className="track-mode-group">
+            <label className="track-mode-label" htmlFor={`instrument-kind-${track.id}`}>Instrument</label>
+            <select
+              id={`instrument-kind-${track.id}`}
+              className="fx-add-select"
+              value={synth.kind}
+              onChange={(e) => onSetInstrument(track.id, e.target.value as InstrumentKindId)}
+              title="Switching instrument starts from that instrument's defaults"
+            >
+              {KIND_GROUPS.map((g) => (
+                <optgroup key={g.category} label={g.label}>
+                  {INSTRUMENT_KINDS.filter((k) => INSTRUMENT_DEFS[k].category === g.category).map((k) => (
+                    <option key={k} value={k}>
+                      {INSTRUMENT_DEFS[k].label}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        )}
         {!synth && (
           <>
             <div className="track-mode-group">
@@ -332,18 +341,23 @@ export function InstrumentPanel({
             </div>
           </>
         )}
-        {synth && (
-          <div className="track-mode-group">
-            <span className="track-mode-label">Kind</span>
-            <div className="track-mode-toggle">
-              {INSTRUMENT_KINDS.map((kind) => (
-                <button key={kind} className={synth.kind === kind ? "active" : ""} onClick={() => onSetInstrument(track.id, kind)}>
-                  {INSTRUMENT_DEFS[kind].label}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="track-mode-group track-mode-end">
+          <label className="track-mode-label" htmlFor={`choke-group-${track.id}`}>Choke Group</label>
+          <select
+            id={`choke-group-${track.id}`}
+            className="fx-add-select"
+            value={effectiveChokeGroup(track) ?? ""}
+            onChange={(e) => onSetChokeGroup(track.id, e.target.value === "" ? null : Number(e.target.value))}
+            title="Tracks in the same group cut each other off (e.g. open and closed hi-hat)"
+          >
+            <option value="">None</option>
+            {chokeGroupOptions(effectiveChokeGroup(track)).map((g) => (
+              <option key={g} value={g}>
+                {g}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="fx-panel-detail">

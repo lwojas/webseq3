@@ -40,7 +40,7 @@ import type { ResamplePhase } from "../components/TransportBar";
 import type { ImportBatchResult } from "../components/AssetsPanel";
 import type { ModulationUi } from "../components/ModulationSlot";
 import type { BarTool, ClipboardRow } from "../components/EditPanel";
-import { INSTRUMENT_KINDS } from "../model/instruments";
+import { INSTRUMENT_DEFS, INSTRUMENT_KINDS, instrumentHasEdits } from "../model/instruments";
 import type { Recipe } from "../guide/recipes";
 import { blockWhileGuideOpen, pauseForGuide } from "../guide/session";
 import { automationSpans, describeSongPosition, sequencesOfPattern, type PlaybackSource } from "../model/composer";
@@ -876,10 +876,16 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
   );
 
   // --- instrument (synth source, sample envelope, selected-note pitch/velocity) ---
-  const handleSetInstrument = useCallback(
-    (trackId: TrackId, kind: InstrumentKindId | null) => dispatch({ type: "SET_TRACK_INSTRUMENT", trackId, kind }),
-    [],
-  );
+  const handleSetInstrument = useCallback((trackId: TrackId, kind: InstrumentKindId | null) => {
+    // Replacing an edited synth discards its settings and modulation; a stray click on a neighbouring
+    // kind (panel or sidebar) must not do that silently.
+    const track = trackById(projectRef.current, trackId);
+    if (track?.instrument && track.instrument.kind !== kind && instrumentHasEdits(track)) {
+      const what = kind ? `with ${INSTRUMENT_DEFS[kind].label}` : "with a sample";
+      if (!window.confirm(`Replace the edited ${INSTRUMENT_DEFS[track.instrument.kind]?.label ?? "synth"} on ${track.name} ${what}? Its settings and modulation will be lost (Undo restores them).`)) return;
+    }
+    dispatch({ type: "SET_TRACK_INSTRUMENT", trackId, kind });
+  }, []);
   const handleSetInstrumentParam = useCallback(
     (trackId: TrackId, paramId: string, value: number) => dispatch({ type: "SET_INSTRUMENT_PARAM", trackId, paramId, value }),
     [],
