@@ -566,6 +566,30 @@ export const INSTRUMENT_DEFS: Record<InstrumentKindId, InstrumentDef> = {
       { id: "glide", label: "Glide", min: 0, max: 0.5, step: 0.01, unit: "s", default: 0.06 },
     ],
   },
+  // Electric (webdsp docs/electric-instrument.md): a digital electric-keyboard voice. Eight macros (Body, Strike, Bell,
+  // Warmth, Age, Crush, Cutoff, Resonance) plus Decay, and Root/Release/Width as long-form extras. Sustained: the
+  // attack comes from Strike and the sustain is the Decay curve, so a note's length is its held time. Root is the
+  // Tune (261.63 Hz = C4).
+  electric: {
+    kind: "electric",
+    label: "Electric",
+    category: "synth",
+    sustained: true,
+    params: [
+      { id: "body", label: "Body", min: 0, max: 1, step: 0.01, default: 0.55 },
+      { id: "strike", label: "Strike", min: 0, max: 1, step: 0.01, default: 0.5 },
+      { id: "bell", label: "Bell", min: 0, max: 1, step: 0.01, default: 0.4 },
+      { id: "warmth", label: "Warmth", min: 0, max: 1, step: 0.01, default: 0.4 },
+      { id: "age", label: "Age", min: 0, max: 1, step: 0.01, default: 0.25 },
+      { id: "crush", label: "Crush", min: 0, max: 1, step: 0.01, default: 0.1 },
+      { id: "cutoff", label: "Cutoff", min: 80, max: 18000, step: 1, unit: "Hz", default: 7000 },
+      { id: "resonance", label: "Resonance", min: 0, max: 1, step: 0.01, default: 0.15 },
+      { id: "decay", label: "Decay", min: 0, max: 1, step: 0.01, default: 0.5 },
+      { id: "tune", label: "Root", min: 32.7, max: 1046.5, step: 0.5, unit: "Hz", default: 261.63 },
+      { id: "release", label: "Release", min: 0.02, max: 4, step: 0.01, unit: "s", default: 0.35 },
+      { id: "width", label: "Width", min: 0, max: 1, step: 0.01, default: 0.6 },
+    ],
+  },
 };
 
 // Source gain: webdsp gives every instrument kind a shared "gain" control (dB, default 0 = unity)

@@ -25,6 +25,7 @@ export const INSTRUMENT_PARAM_NAMES: Record<string, string[]> = {
   matrix: [...MATRIX_NAMES, ...MATRIX_CELLS],
   noise: ["source", "color", "texture", "density", "tune", "resonance", "spread", "sweep", "attack", "decay", "sustain", "release", "drive", "tone", "mix"],
   wobble: ["wobble", "rate", "shape", "growl", "bite", "weight", "drive", "cutoff", "resonance", "tune", "release", "freerate", "glide"],
+  electric: ["body", "strike", "bell", "warmth", "age", "crush", "cutoff", "resonance", "decay", "tune", "release", "width"],
   fm: ["tune", "ratio", "timbre", "snap", "tone", "attack", "decay", "sustain", "release", "legato", "slide"],
   bass: ["tune", "body", "bite", "cutoff", "resonance", "attack", "decay", "sustain", "release", "legato", "slide"],
 };
@@ -67,6 +68,7 @@ const KIND_IDS: [string, InstrumentKind][] = [
   ["matrix", InstrumentKind.Matrix],
   ["noise", InstrumentKind.Noise],
   ["wobble", InstrumentKind.Wobble],
+  ["electric", InstrumentKind.Electric],
 ];
 
 export function mockRuntime() {

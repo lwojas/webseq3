@@ -180,7 +180,7 @@ describe("compileInstrumentNotes", () => {
   });
 
   it("has no Filter Mod control: the shared filter modulation was removed from Bass and Pulse", () => {
-    for (const kind of ["bass", "pulse", "pad", "fm", "hypersaw", "pwmbeast", "dm_thump", "dm_metal", "dm_tone", "dm_crack", "dm_chaos", "percsynth", "edge", "matrix", "noise", "wobble"] as const) {
+    for (const kind of ["bass", "pulse", "pad", "fm", "hypersaw", "pwmbeast", "dm_thump", "dm_metal", "dm_tone", "dm_crack", "dm_chaos", "percsynth", "edge", "matrix", "noise", "wobble", "electric"] as const) {
       expect(INSTRUMENT_DEFS[kind].params.some((p) => p.id === "filterMod")).toBe(false);
     }
   });
@@ -284,6 +284,20 @@ describe("compileInstrumentNotes", () => {
     expect(def.params.find((p) => p.id === "shape")?.options?.map((o) => o.label)).toEqual(["Smooth", "Square", "Ramp", "Random"]);
     const proj = projectWithNotes("wobble");
     expect(rootMidiNote(proj.tracks[0])).toBeCloseTo(33);   // 55 Hz = A1
+    expect(compileInstrumentNotes(proj.patterns[0], proj.tracks, 120, 10)[0].params.duration).toBeGreaterThan(0);
+  });
+
+  it("lists Electric as sustained, with every engine param and a C4 root", () => {
+    const def = INSTRUMENT_DEFS.electric;
+    expect(def.sustained).toBe(true);
+    expect(def.params.map((p) => p.id)).toEqual(["gain", ...INSTRUMENT_PARAM_NAMES.electric]);
+    expect(new Set(def.params.map((p) => p.id)).size).toBe(def.params.length);
+    for (const p of def.params) {
+      expect(p.default).toBeGreaterThanOrEqual(p.min);
+      expect(p.default).toBeLessThanOrEqual(p.max);
+    }
+    const proj = projectWithNotes("electric");
+    expect(rootMidiNote(proj.tracks[0])).toBeCloseTo(60);   // 261.63 Hz = C4
     expect(compileInstrumentNotes(proj.patterns[0], proj.tracks, 120, 10)[0].params.duration).toBeGreaterThan(0);
   });
 
