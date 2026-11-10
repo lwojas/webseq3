@@ -12,8 +12,9 @@ const TYPE_NAMES = ["Bell", "Low shelf", "High shelf", "Low-pass", "High-pass", 
 const GRID_HZ = [50, 100, 200, 500, 1000, 2000, 5000, 10000];
 
 // Live spectrum behind the curve (the EQ's output, with its input fainter): its own dB scale (dBFS), independent of the EQ's +-dB axis.
-const SPECTRUM_MIN_DB = -90;
-const SPECTRUM_MAX_DB = -10;
+// A 60 dB window (was 80) so a +-12 dB band moves the trace by a visible fifth of the height.
+const SPECTRUM_MIN_DB = -80;
+const SPECTRUM_MAX_DB = -20;
 
 interface Props {
   params: Record<string, number>;
@@ -33,8 +34,10 @@ export function EqCurveEditor({ params, onSetParam, spectrumTap, spectrumKey = "
   useSpectrumCanvas(spectrumRef, () => spectrumTap?.() ?? null, spectrumKey, {
     width: W, height: H, minDb: SPECTRUM_MIN_DB, maxDb: SPECTRUM_MAX_DB,
     // The EQ's output is the main fill (it moves as you drag); its input sits fainter behind it.
-    main: { fill: "rgba(160, 190, 220, 0.22)", stroke: "rgba(160, 190, 220, 0.7)" },
-    input: { fill: "rgba(160, 190, 220, 0.07)", stroke: "rgba(160, 190, 220, 0.25)" },
+    main: { fill: "rgba(160, 190, 220, 0.28)", stroke: "rgba(190, 215, 240, 0.9)" },
+    // The input is an outline over the output, so what the EQ removes shows as the gap between the two.
+    input: { fill: "rgba(160, 190, 220, 0.0)", stroke: "rgba(160, 190, 220, 0.55)" },
+    analyzer: { fallDbPerSec: 80 },
   });
   const [selected, setSelected] = useState(1);
   const wasOnAtFirstClick = useRef(false);

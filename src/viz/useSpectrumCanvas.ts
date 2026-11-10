@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { SpectrumAnalyzer, SpectrumFeed, spectrumPoints, type SpectrumSource } from "webdsp";
+import { SpectrumAnalyzer, SpectrumFeed, spectrumPoints, type SpectrumOptions, type SpectrumSource } from "webdsp";
 import { CanvasSurface } from "./canvasSurface";
 import { paintSpectrum, type SpectrumStyle } from "./paint";
 
@@ -20,6 +20,8 @@ interface Options {
   main: SpectrumStyle;
   /** The effect's INPUT, drawn fainter behind the output; omit to show only the output. */
   input?: SpectrumStyle;
+  /** Analyser tuning (e.g. a faster fall so a changed EQ shows up quickly). Read when the display attaches. */
+  analyzer?: SpectrumOptions;
 }
 
 /** Paints a live spectrum into `canvasRef` while mounted: the effect's output as the main fill and,
@@ -38,8 +40,8 @@ export function useSpectrumCanvas(canvasRef: RefObject<HTMLCanvasElement | null>
     const canvas = canvasRef.current;
     if (!canvas) return;
     const surface = new CanvasSurface(canvas, { width: optsRef.current.width, height: optsRef.current.height });
-    const output = new SpectrumAnalyzer();
-    const input = new SpectrumAnalyzer();
+    const output = new SpectrumAnalyzer(optsRef.current.analyzer);
+    const input = new SpectrumAnalyzer(optsRef.current.analyzer);
     const pts = new Float32Array(output.columns * 2);
     let outFeed: SpectrumFeed | null = null;
     let inFeed: SpectrumFeed | null = null;
