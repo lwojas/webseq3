@@ -4066,3 +4066,75 @@ option.out-of-scale {
   min-width: 4.5em;
   text-align: right;
 }
+
+/* --- Compressor display (components/CompressorDisplay.tsx) --- */
+.comp-display {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.comp-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.comp-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 260px;
+}
+
+.comp-presets button,
+.comp-ab {
+  padding: 4px 10px;
+}
+
+.comp-presets button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.comp-ab.dry {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.comp-graphs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.comp-graphs canvas {
+  background: var(--bg);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+}
+
+.comp-curve {
+  flex: 1 1 180px;
+  max-width: 260px;
+  aspect-ratio: 1;
+}
+
+.comp-meters {
+  flex: 2 1 260px;
+  max-width: 380px;
+  aspect-ratio: 380 / 260;
+}
+
+.comp-story {
+  margin: 0;
+  min-height: 2.6em;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.comp-story b {
+  color: var(--amber);
+  font-weight: 600;
+}

@@ -5,6 +5,7 @@ import { forgetPeaks } from "../audio/peaks";
 import type { Asset, AssetId, AutomationLane, Project, ChainEntryId, FxId, FxTarget, FxType, InstrumentKindId, NoteId, PatternId, PlaybackMode, SampleEnvelope, SampleMode, Track, TrackEventLfo, TrackId, TrackLfo, VoiceMode } from "../model/types";
 import { useAutomationEditing } from "../app/useAutomationEditing";
 import { FX_KIND, fxChainsFor } from "../audio/fxChain";
+import type { CompressorTap } from "../components/CompressorDisplay";
 import { notesForTrack, trackById } from "../model/types";
 import { findLane } from "../model/automation";
 import { lanesInPattern } from "../model/patternAutomation";
@@ -824,6 +825,16 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
       if (!runtime || bus === undefined) return null;
       const effect = fxChainsFor(runtime).engineIdOf(bus, fxId);
       return effect === undefined ? null : { source: runtime, bus, effect };
+    },
+    [runtime, getBusId, selectedTarget],
+  );
+
+  // Meter feed and level-matched A/B for a compressor's display: the runtime and the bus the FX sits on.
+  const compressorTapFor = useCallback(
+    (fxId: FxId): CompressorTap | null => {
+      const bus = getBusId(selectedTarget);
+      if (!runtime || bus === undefined) return null;
+      return { runtime, bus, setDry: (trimDb) => fxChainsFor(runtime).setDry(bus, fxId, trimDb) };
     },
     [runtime, getBusId, selectedTarget],
   );
@@ -1707,6 +1718,7 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     setSelectedNoteId,
     setSelectedPatternId,
     spectrumTapFor,
+    compressorTapFor,
     status,
     transportProps,
     unavailableKinds,

@@ -228,6 +228,7 @@ function ShellInner() {
               onSetFxLfo={c.handleSetFxLfo}
               onRemoveFxLfo={c.handleRemoveFxLfo}
               spectrumTapFor={c.spectrumTapFor}
+              compressorTapFor={c.compressorTapFor}
             />
           )}
           {selectedTarget !== "master" && deviceTab === "instrument" && <InstrumentPanel {...c.instrumentProps} />}

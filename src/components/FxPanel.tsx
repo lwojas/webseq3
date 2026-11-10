@@ -4,6 +4,7 @@ import { resolvedOutput, resolvedSend } from "../model/types";
 import { canRouteTo } from "../model/project";
 import { FxChainStrip } from "./FxChainStrip";
 import { ModulePanel } from "./ModulePanel";
+import type { CompressorTap } from "./CompressorDisplay";
 import type { SpectrumTap } from "../viz/useSpectrumCanvas";
 import { ModulationSlot, modulationBadges, type AutomationUi, type ModulationUi } from "./ModulationSlot";
 
@@ -33,6 +34,8 @@ interface Props {
   onRemoveFxLfo: (fxId: FxId, index: number) => void;
   /** Live-spectrum source for an FX (its engine effect input), or null without an engine. */
   spectrumTapFor?: (fxId: FxId) => SpectrumTap | null;
+  /** Engine side of a compressor FX (meter feed, level-matched A/B), or null without an engine. */
+  compressorTapFor?: (fxId: FxId) => CompressorTap | null;
 }
 
 /** The bottom module panel, contextual to whatever is currently selected in the timeline — a
@@ -60,6 +63,7 @@ export function FxPanel({
   onSetFxLfo,
   onRemoveFxLfo,
   spectrumTapFor,
+  compressorTapFor,
 }: Props) {
   const selectedFx = fx.find((f) => f.id === selectedFxId) ?? null;
   const title = target === "master" ? "MASTER" : `${track?.name ?? target}`;
@@ -85,6 +89,7 @@ export function FxPanel({
             badges={modulationBadges(automation?.lanes ?? [], selectedFx.lfos ?? [])}
             onAutomateParam={(paramId) => automation?.onAdd(paramId)}
             spectrumTap={spectrumTapFor ? () => spectrumTapFor(selectedFx.id) : undefined}
+            compressorTap={compressorTapFor ? () => compressorTapFor(selectedFx.id) : undefined}
           >
             <ModulationSlot
               lfos={selectedFx.lfos ?? []}

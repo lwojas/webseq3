@@ -151,6 +151,8 @@ export class FxChainSync {
   private chains = new Map<BusId, BusChain>();
   /** Where `trackKey` parameters (the compressor sidechain) find their track's bus; set by each sync(). */
   private busOf: BusOf = () => undefined;
+  /** Compressors currently A/B'd to "dry" (see setDry), with the dB their makeup is replaced by. A UI-only state: never in the project. */
+  private dry = new Map<FxId, number>();
 
   constructor(private readonly runtime: AudioRuntime) {}
 
@@ -161,7 +163,12 @@ export class FxChainSync {
 
   /** What the engine is told for a parameter: the project value, except a `trackKey` (the sidechain
    * source), whose track number becomes that track's bus id (0 = none, also for a track with no bus). */
-  private engineValue(type: FxType, paramId: string, value: number): number {
+  private engineValue(type: FxType, paramId: string, value: number, fxId?: FxId): number {
+    const trim = fxId === undefined ? undefined : this.dry.get(fxId);
+    if (trim !== undefined && type === "compressor") {
+      if (paramId === "ratio") return 1;
+      if (paramId === "makeup") return Math.max(-24, Math.min(24, trim));
+    }
     if (!FX_DEFS[type].params.find((p) => p.id === paramId)?.trackKey) return value;
     const track = keyTrackId(value);
     return track ? (this.busOf(track) ?? 0) : 0;
@@ -216,7 +223,7 @@ export class FxChainSync {
         if (live.base.get(def.id) === value) continue;
         live.base.set(def.id, value);
         live.written.set(def.id, value);
-        this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue(instance.type, def.id, value));
+        this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue(instance.type, def.id, value, instance.id));
       }
       this.syncLfos(busId, live, instance.lfos ?? []);
     });
@@ -240,6 +247,22 @@ export class FxChainSync {
     );
   }
 
+  /** Level-matched bypass of a compressor, for A/B: while `trimDb` is a number the effect keeps running at 1:1 (exactly no reduction)
+   * with its makeup replaced by `trimDb` (the loudness the compression was adding or taking away), so the comparison is character,
+   * not volume. null restores the project's ratio and makeup. Scheduled automation of ratio/makeup is not overridden. */
+  setDry(busId: BusId, fxId: FxId, trimDb: number | null): void {
+    if (trimDb === null) this.dry.delete(fxId);
+    else this.dry.set(fxId, trimDb);
+    const live = this.chains.get(busId)?.effects.get(fxId);
+    if (!live || live.type !== "compressor") return;
+    for (const paramId of ["ratio", "makeup"]) {
+      const value = live.written.get(paramId) ?? live.base.get(paramId);
+      const param = FX_NODE_PARAMS.compressor[paramId];
+      if (value === undefined || param === undefined) continue;
+      this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue("compressor", paramId, value, fxId));
+    }
+  }
+
   /** Writes one (automated) parameter value straight to the engine instance for `fxId`. A
    * no-op if that instance isn't live on `busId` yet or the value is already in the engine. */
   setParam(busId: BusId, fxId: FxId, paramId: string, value: number): void {
@@ -248,7 +271,7 @@ export class FxChainSync {
     const param = FX_NODE_PARAMS[live.type][paramId];
     if (param === undefined || live.written.get(paramId) === value) return;
     live.written.set(paramId, value);
-    this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue(live.type, paramId, value));
+    this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue(live.type, paramId, value, fxId));
   }
 
   /** The engine target of one parameter of one live FX instance, for scheduled parameter events
@@ -270,13 +293,13 @@ export class FxChainSync {
    * last automated value. */
   restoreBase(): void {
     for (const [busId, chain] of this.chains) {
-      for (const live of chain.effects.values()) {
+      for (const [fxId, live] of chain.effects) {
         for (const [paramId, base] of live.base) {
           if (live.written.get(paramId) === base) continue;
           const param = FX_NODE_PARAMS[live.type][paramId];
           if (param === undefined) continue;
           live.written.set(paramId, base);
-          this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue(live.type, paramId, base));
+          this.runtime.setEffectParameter(busId, live.engineId, param, this.engineValue(live.type, paramId, base, fxId));
         }
       }
     }

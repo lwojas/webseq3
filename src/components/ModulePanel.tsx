@@ -1,5 +1,6 @@
 import { FX_DEFS, keyTrackId, keyTrackValue } from "../model/fx";
 import type { FxInstance, Track, TrackId } from "../model/types";
+import { CompressorDisplay, type CompressorTap } from "./CompressorDisplay";
 import { EqCurveEditor } from "./EqCurveEditor";
 import type { SpectrumTap } from "../viz/useSpectrumCanvas";
 import { ModBadge } from "./ModulationSlot";
@@ -18,6 +19,8 @@ interface Props {
   onAutomateParam: (paramId: string) => void;
   /** Live-spectrum source for an EQ (the engine effect's input), or undefined without an engine. */
   spectrumTap?: () => SpectrumTap | null;
+  /** Engine side of a compressor (meters, level-matched A/B), or undefined without an engine. */
+  compressorTap?: () => CompressorTap | null;
   /** The modulation card (automation + LFOs) for this FX, rendered below its parameters. */
   children?: React.ReactNode;
 }
@@ -26,7 +29,7 @@ interface Props {
  * it's rendering a filter vs. a delay specifically, so a new FX type needs no new UI
  * code here, only an FX_DEFS entry and an audio/fxChain.ts mapping (FX_KIND and its parameter ids). Clicking a parameter's label
  * selects it as the one whose automation is shown in the lane below (see AutomationLane). */
-export function ModulePanel({ fx, tracks = [], ownerTrackId = null, onSetParam, onSetEnabled, badges, onAutomateParam, spectrumTap, children }: Props) {
+export function ModulePanel({ fx, tracks = [], ownerTrackId = null, onSetParam, onSetEnabled, badges, onAutomateParam, spectrumTap, compressorTap, children }: Props) {
   const def = FX_DEFS[fx.type];
 
   const paramsBlock = (
@@ -100,6 +103,7 @@ export function ModulePanel({ fx, tracks = [], ownerTrackId = null, onSetParam, 
         </button>
       </div>
       {fx.type === "eq" && <EqCurveEditor params={fx.params} onSetParam={onSetParam} spectrumTap={spectrumTap} spectrumKey={fx.id} />}
+      {fx.type === "compressor" && <CompressorDisplay key={fx.id} params={fx.params} onSetParam={onSetParam} tap={compressorTap} />}
       {fx.type === "eq" ? (
         <details className="eq-all-params">
           <summary>All parameters (click a name to automate)</summary>
