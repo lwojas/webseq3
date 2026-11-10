@@ -56,6 +56,8 @@ interface StepWindow {
   patternId: PatternId;
   startTime: number;
   endTime: number;
+  /** Looped windows start before they are audible (the loop begins part-way into the pattern): nothing is scheduled earlier. */
+  from?: number;
 }
 
 interface Position {
@@ -72,6 +74,8 @@ interface SongWindow {
   instance: SongInstance;
   startTime: number;
   endTime: number;
+  /** As StepWindow.from: a looped sequence that began before the loop did. */
+  from?: number;
 }
 
 /** What is sounding on a lane right now (Song mode), for the Composer's highlighting and the grid's playhead. */
@@ -81,6 +85,23 @@ export interface ActiveSequence {
   patternId: PatternId;
   /** Beats into the sequence. */
   beat: number;
+}
+
+/** A stretch of the source that plays over and over. In Song mode `start`/`end` are song beats; in Pattern mode they are steps of
+ * pattern `patternId` (which then loops on its own, queued or not). Out-of-range values are clamped when a run begins. */
+export interface LoopRegion {
+  start: number;
+  end: number;
+  patternId?: PatternId;
+}
+
+/** A loop as one run is playing it: clamped, fixed for the run (a project edit never moves the loop point under the scheduler). */
+interface LoopRun {
+  start: number;
+  end: number;
+  patternId: PatternId | null;
+  /** The pattern's place in the queue, so leaving the loop continues from it. */
+  stepIndex: number;
 }
 
 export type ResampleStatus = "idle" | "armed" | "capturing";
@@ -146,6 +167,8 @@ export class Transport {
     /** What is being played: the pattern queue (default) or the Composer song. Read on every use, but
      * only changes between runs: the owner stops the transport before switching it. */
     private readonly getSource: () => PlaybackSource = () => "pattern",
+    /** The loop to play, if any: read when a run begins; the owner calls reloop() when it changes. */
+    private readonly getLoop: () => LoopRegion | null = () => null,
   ) {
     // Forget each sequenced voice once the engine reports it ended. activeVoices then holds only
     // voices that may still sound, which is all haltAudio needs to release. Without this the set
@@ -159,6 +182,11 @@ export class Transport {
   // list, in cycle c, starts at songOrigin + (c * length + startBeat) * secondsPerBeat. tickSong() schedules
   // each one as its start enters the lookahead window, through the same note scheduling Pattern mode uses.
   // Lanes overlap simply because their instances do; a gap is the absence of an instance.
+  private loopRun: LoopRun | null = null;
+  private loopOrigin = 0; // engine time of the loop's start in iteration 0 (before audibleFrom when the run began part-way in)
+  private loopIter = 0; // the iteration being scheduled
+  private loopIndex = 0; // Song mode: the next instance of that iteration
+
   private songOrigin = 0; // engine time of song beat 0, cycle 0
   private songNext = 0; // how many instance slots (across cycles) have been scheduled
   private songWindows: SongWindow[] = [];
@@ -228,12 +256,21 @@ export class Transport {
     if (this.status === "playing") this.haltAudio();
     const project = this.getProject();
     const now = this.runtime.getCurrentTime();
-    this.begin(this.positionAtChainBeat(project, chainBeat), Math.max(at, now + MIN_START_AHEAD_SECONDS), bpm);
+    this.begin(this.positionAtChainBeat(project, chainBeat), Math.max(at, now + MIN_START_AHEAD_SECONDS), bpm, false);
   }
 
   /** Common start: the queue position `resume` sounds at engine time `audibleAt`, at `bpm`. */
-  private begin(resume: Position, audibleAt: number, bpm: number): void {
+  private begin(resume: Position, audibleAt: number, bpm: number, allowLoop = true): void {
     const spb = secondsPerBeat(bpm);
+    // A loop moves the start into the loop (and is what the run then plays); a host-driven start never loops.
+    const looped = allowLoop ? this.resolveLoop(this.getProject(), resume) : null;
+    this.loopRun = looped?.run ?? null;
+    if (looped) {
+      resume = looped.position;
+      this.loopOrigin = audibleAt - ((looped.run.patternId === null ? (resume.songBeat ?? 0) : resume.beat) - looped.run.start) * spb;
+      this.loopIter = 0;
+      this.loopIndex = 0;
+    }
     this.anchorTempo = bpm;
     this.nextStepIndex = resume.stepIndex;
     // Song mode resumes at a song beat; Pattern mode at a beat of a queue step.
@@ -257,6 +294,53 @@ export class Transport {
 
     this.timerId = setInterval(() => this.tick(), TICK_INTERVAL_MS);
     this.tick();
+  }
+
+  /** The loop this run plays, clamped to what exists now, and where in it the run starts: `resume` if that is inside the loop, else the
+   * loop's start. Null when there is no loop (or nothing to loop), and while following a host. */
+  private resolveLoop(project: Project, resume: Position): { run: LoopRun; position: Position } | null {
+    const loop = this.getLoop();
+    if (!loop || this.hosted) return null;
+    if (this.inSong()) {
+      const end = Math.min(loop.end, songBeats(project));
+      const start = Math.max(0, loop.start);
+      if (!(end - start > 0)) return null;
+      const at = resume.songBeat ?? 0;
+      return { run: { start, end, patternId: null, stepIndex: 0 }, position: this.songPosition(project, at >= start && at < end ? at : start) };
+    }
+    const pattern = loop.patternId ? patternById(project, loop.patternId) : undefined;
+    if (!pattern) return null;
+    const total = totalBeats(pattern, project.beatsPerBar);
+    const start = Math.min(Math.max(0, Math.floor(loop.start)), total - 1);
+    const end = Math.min(Math.max(start + 1, Math.ceil(loop.end)), total);
+    if (!(end - start > 0)) return null;
+    const stepIndex = Math.max(0, this.chainIndexOf(project, pattern.id));
+    const at = resume.patternId === pattern.id ? resume.beat : -1;
+    return { run: { start, end, patternId: pattern.id, stepIndex }, position: { stepIndex, patternId: pattern.id, beat: at >= start && at < end ? at : start } };
+  }
+
+  /** The first queue step that plays `patternId`, or -1. */
+  private chainIndexOf(project: Project, patternId: PatternId): number {
+    for (let i = 0; i < project.patternChain.length; i++) if (resolveChainStep(project, i)?.pattern.id === patternId) return i;
+    return -1;
+  }
+
+  /** Call when the loop (the getLoop() result) changed: a running transport carries on from where it is, now inside the new loop (or
+   * outside any), like retime(). A stopped or paused one picks the loop up when it next starts. */
+  reloop(): void {
+    this.retime();
+  }
+
+  /** Starts (or restarts) the pattern queue so that pattern `patternId` sounds from step `beat` — "play from here" in the Pattern
+   * workspace. A pattern the queue does not hold starts the queue from its beginning. Does nothing in Song mode. */
+  playPatternFrom(patternId: PatternId, beat: number): void {
+    if (this.hosted || this.inSong()) return;
+    if (this.status === "playing") this.haltAudio();
+    const project = this.getProject();
+    const stepIndex = this.chainIndexOf(project, patternId);
+    const pattern = patternById(project, patternId);
+    const position: Position = stepIndex < 0 || !pattern ? this.chainStart(project) : { stepIndex, patternId, beat: Math.max(0, Math.min(beat, totalBeats(pattern, project.beatsPerBar) - 1)) };
+    this.begin(position, this.runtime.getCurrentTime() + LEAD_IN_SECONDS, project.bpm);
   }
 
   /** The queue position `chainBeat` beats from the start of the queue, wrapping around its total length
@@ -390,6 +474,13 @@ export class Transport {
     if (this.hosted) return this.positionAtChainBeat(this.getProject(), hostBeatAt(this.hosted, now) * BEATS_PER_QUARTER);
     if (now < this.audibleFrom) return this.startPosition;
     const spb = secondsPerBeat(this.anchorTempo);
+    if (this.loopRun) {
+      const run = this.loopRun;
+      const length = run.end - run.start;
+      const into = ((((now - this.loopOrigin) / spb) % length) + length) % length;
+      if (run.patternId === null) return this.songPosition(this.getProject(), run.start + into);
+      return { stepIndex: run.stepIndex, patternId: run.patternId, beat: run.start + into };
+    }
     if (this.inSong()) return this.songPosition(this.getProject(), (now - this.songOrigin) / spb);
     for (const w of this.stepWindows) {
       if (now >= w.startTime && now < w.endTime) {
@@ -552,7 +643,7 @@ export class Transport {
 
   /** Compiles `pattern` for a step starting at `stepStartTime` and hands it to the engine; notes before `notBefore`
    * are dropped. The one place notes are scheduled, for a queue step and a Song-mode sequence alike. */
-  private scheduleNotes(project: Project, pattern: Pattern, stepStartTime: number, notBefore: number): void {
+  private scheduleNotes(project: Project, pattern: Pattern, stepStartTime: number, notBefore: number, notAfter = Infinity): void {
     const tracks = project.tracks;
     let compiled = compilePatternIterationTracked(
       pattern,
@@ -573,6 +664,11 @@ export class Transport {
       const cutoff = notBefore - AUDIBLE_EPSILON_SECONDS;
       compiled = compiled.filter((c) => c.event.time >= cutoff);
       synthNotes = synthNotes.filter((n) => (n.params.time ?? 0) >= cutoff);
+    }
+    if (notAfter < Infinity) {
+      const cutoff = notAfter - AUDIBLE_EPSILON_SECONDS;
+      compiled = compiled.filter((c) => c.event.time < cutoff);
+      synthNotes = synthNotes.filter((n) => (n.params.time ?? 0) < cutoff);
     }
     const compiledCount = compiled.length;
     // Choke groups: notes of two tracks in one group starting at the same instant are resolved here,
@@ -645,12 +741,70 @@ export class Transport {
     const masterLane = masterLaneIndex(instances);
     const windowsFor: WindowsFor = (owner) => {
       const target = owner.kind === "master" ? "master" : owner.id;
-      return this.songWindows.filter((w) => automationAppliesTo(w.instance, target, masterLane)).map((w) => ({ startTime: w.startTime, endTime: w.endTime, patternId: w.instance.pattern.id }));
+      return this.songWindows.filter((w) => automationAppliesTo(w.instance, target, masterLane)).map((w) => ({ startTime: w.startTime, endTime: w.endTime, patternId: w.instance.pattern.id, from: w.from }));
     };
     scheduleAutomation(this.runtime, project, this.getBusId, windowsFor, spb, now, horizon);
   }
 
+  /** A looped run's tick: the loop's stretch, iteration after iteration. Song mode plays every sequence that overlaps the stretch
+   * (cut to it: the part of a sequence before the stretch is skipped, the part after it is dropped); Pattern mode plays the stretch
+   * of one pattern. Nothing here touches the queue or the song's own counters. */
+  private tickLoop(run: LoopRun): void {
+    const project = this.getProject();
+    const now = this.runtime.getCurrentTime();
+    const horizon = now + LOOKAHEAD_SECONDS;
+    const spb = secondsPerBeat(this.anchorTempo);
+    const iterSeconds = (run.end - run.start) * spb;
+    const pattern = run.patternId === null ? undefined : patternById(project, run.patternId);
+    const list = run.patternId === null ? this.songInstancesOf(project).filter((i) => i.startBeat < run.end && i.startBeat + i.beats > run.start) : [];
+
+    let guard = 0;
+    while (guard < MAX_STEP_SKIPS_PER_TICK) {
+      guard++;
+      if (run.patternId === null) {
+        if (list.length === 0) break;
+        if (this.loopIndex >= list.length) {
+          this.loopIndex = 0;
+          this.loopIter++;
+        }
+        const instance = list[this.loopIndex];
+        const iterStart = this.loopOrigin + this.loopIter * iterSeconds;
+        const startTime = iterStart + (instance.startBeat - run.start) * spb;
+        // A sequence that began before the loop is due when the iteration starts, not when it would have begun.
+        if (Math.max(startTime, iterStart) >= horizon) break;
+        this.loopIndex++;
+        const iterEnd = iterStart + iterSeconds;
+        const endTime = Math.min(startTime + instance.beats * spb, iterEnd);
+        if (endTime < now - 1) continue;
+        this.scheduleNotes(project, applyLaneModifiers(instance.pattern, instance.modifiers), startTime, Math.max(this.audibleFrom, iterStart), iterEnd);
+        this.songWindows.push({ instance, startTime, endTime, from: iterStart });
+      } else {
+        if (!pattern) break;
+        const iterStart = this.loopOrigin + this.loopIter * iterSeconds;
+        if (iterStart >= horizon) break;
+        this.loopIter++;
+        const iterEnd = iterStart + iterSeconds;
+        if (iterEnd < now - 1) continue;
+        const patternStart = iterStart - run.start * spb;
+        this.scheduleNotes(project, pattern, patternStart, Math.max(this.audibleFrom, iterStart), iterEnd);
+        this.stepWindows.push({ stepIndex: run.stepIndex, patternId: pattern.id, startTime: patternStart, endTime: iterEnd, from: iterStart });
+      }
+    }
+
+    if (run.patternId === null) {
+      this.songWindows = this.songWindows.filter((w) => w.endTime > now - 1.0);
+      if (this.status === "playing") this.scheduleSongAutomation(project, this.songInstancesOf(project), spb, now, horizon);
+    } else {
+      this.stepWindows = this.stepWindows.filter((w) => w.endTime > now - 1.0);
+      this.scheduleAutomationWindow(project, now, horizon);
+    }
+  }
+
   private tick(): void {
+    if (this.loopRun) {
+      this.tickLoop(this.loopRun);
+      return;
+    }
     if (this.inSong()) {
       this.tickSong();
       return;

@@ -6,6 +6,7 @@ import { AutomationLane } from "./AutomationLane";
 import type { AutomationRowProps } from "./AutomationRow";
 import { ComposerTrackList, type ComposerTrackListProps } from "./ComposerTrackList";
 import { RafText } from "./RafText";
+import { Icon } from "../ui/kit/Icon";
 import { LaneTracks } from "../ui/arrange/LaneTracks";
 import { ClipOverview } from "../ui/arrange/ClipOverview";
 import { sequencesOfPattern } from "../model/composer";
@@ -62,6 +63,10 @@ export interface ComposerToolbarProps {
   onDelete: () => void;
   onEdit: () => void;
   onPlayFromHere: () => void;
+  /** Loop the selected sequence: on while the song loops it. Off with no sequence selected (and not looping). */
+  looping: boolean;
+  canLoop: boolean;
+  onToggleLoop: () => void;
 }
 
 interface Props {
@@ -80,6 +85,8 @@ interface Props {
   /** The marker: a bar boundary, or null. Click the ruler to set it (click it again to clear it). */
   marker: number | null;
   onSetMarker: (bar: number | null) => void;
+  /** The looped stretch, in bars from the start of the timeline, or null. */
+  loopRegion: { start: number; end: number } | null;
   selectedSequenceId: SequenceId | null;
   selectedLaneId: LaneId | null;
   onSelectSequence: (id: SequenceId) => void;
@@ -118,6 +125,7 @@ export function ComposerTimeline({
   getSongText,
   marker,
   onSetMarker,
+  loopRegion,
   selectedSequenceId,
   selectedLaneId,
   onSelectSequence,
@@ -261,6 +269,7 @@ export function ComposerTimeline({
                 onSetMarker(bar === marker ? null : bar);
               }}
             >
+              {loopRegion && <span className="composer-loop-band" style={{ left: left(loopRegion.start), width: (loopRegion.end - loopRegion.start) * barPx }} />}
               {marker !== null && <span className="composer-marker-flag" style={{ left: left(marker) }} />}
               {Array.from({ length: totalBars }, (_, bar) => (
                 <span key={bar} className="composer-bar-mark" style={{ left: left(bar) }}>
@@ -389,6 +398,7 @@ export function ComposerTimeline({
             </div>
           )}
           {lanes.length === 0 && <div className="composer-empty">Add a sequence or a lane to start composing the song.</div>}
+          {loopRegion && <div className="composer-loop-region" style={{ left: COMPOSER_HEADER_PX + left(loopRegion.start), width: (loopRegion.end - loopRegion.start) * barPx }} />}
           {marker !== null && <div className="composer-marker" style={{ left: COMPOSER_HEADER_PX + left(marker) }} />}
           <div className="composer-playhead-layer" style={{ left: COMPOSER_HEADER_PX + COMPOSER_INSET_PX }}>
             <div className="composer-playhead" ref={playheadRef} />
@@ -431,8 +441,11 @@ function ComposerToolbar(
         </button>
       </div>
       {/* Opening a sequence is the Edit sequence icon in the shell's context bar (it sits beside the Edit menu). */}
-      <button className="btn small" disabled={!p.hasSelection && !p.hasMarker} title={p.hasMarker ? "Play the song from the marker" : needs ?? "Play the song from the start of this sequence (set a marker to start anywhere)"} onClick={p.onPlayFromHere}>
-        ▶ From here
+      <button className="wx-icon-btn" disabled={!p.hasSelection && !p.hasMarker} aria-label="Play from here" title={p.hasMarker ? "Play the song from the marker" : needs ?? "Play the song from the start of this sequence (click the ruler to set a marker and start anywhere)"} onClick={p.onPlayFromHere}>
+        <Icon name="playFrom" />
+      </button>
+      <button className="wx-icon-btn" disabled={!p.canLoop} aria-pressed={p.looping} aria-label="Loop the selected sequence" title={p.looping ? "Looping the selected sequence: click to play on through the song" : p.canLoop ? "Loop the selected sequence (the loop follows the selection)" : needs} onClick={p.onToggleLoop}>
+        <Icon name="loop" />
       </button>
     </div>
   );

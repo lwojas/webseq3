@@ -7,6 +7,8 @@ const P = {
   play: "M5 3.5v9l7.5-4.5z",
   pause: "M5.5 3.5v9M10.5 3.5v9",
   stop: "M4.5 4.5h7v7h-7z",
+  playFrom: "M3.5 3v10M6.5 3.5v9l7-4.5z",
+  marker: "M4.5 3h7v5.5L8 12.5 4.5 8.5z",
   skipStart: "M4 3.5v9M12 3.5L6.5 8 12 12.5z",
   record: "M8 4.5a3.5 3.5 0 100 7 3.5 3.5 0 000-7z",
   undo: "M6 4L3 7l3 3M3 7h6.5a3.5 3.5 0 010 7H7",

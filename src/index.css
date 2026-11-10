@@ -789,6 +789,26 @@ select {
   z-index: 3;
 }
 
+/* The looped sequence: a tinted band in the ruler and over the lanes. */
+.composer-loop-band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  pointer-events: none;
+}
+
+.composer-loop-region {
+  position: absolute;
+  top: 22px;
+  bottom: 0;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  border-left: 1px solid var(--accent-dim);
+  border-right: 1px solid var(--accent-dim);
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* The track column under the timeline: only this part scrolls vertically (the timeline above keeps its place), and it has no
    horizontal scroll or playhead -- it is a list, not a second timeline. Rows reuse the sequencer's track-header look. */
 .composer-tracks {

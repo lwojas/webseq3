@@ -10,7 +10,7 @@ import { MusicalGuide } from "../components/MusicalGuide";
 import { TrackEditor } from "../components/TrackEditor";
 import { BANK_SIZE, tracksInBank } from "../model/project";
 import { maxPatternBars, sequenceName } from "../model/composer";
-import { trackById, type FxId, type NoteId } from "../model/types";
+import { totalBeats, trackById, type FxId, type NoteId } from "../model/types";
 import { timeAgo } from "../persistence/recovery";
 import { useController } from "../state/useController";
 import { EditMenu } from "./EditMenu";
@@ -38,8 +38,10 @@ interface Persisted {
   deviceOpen: boolean;
   deviceHeight: number;
   drawer: DrawerState;
+  /** How many steps the Pattern workspace's loop button loops. */
+  loopSteps: number;
 }
-const DEFAULTS: Persisted = { sidebar: "samples", libraryWidth: 280, deviceOpen: true, deviceHeight: 260, drawer: DEFAULT_DRAWER };
+const DEFAULTS: Persisted = { sidebar: "samples", libraryWidth: 280, deviceOpen: true, deviceHeight: 260, drawer: DEFAULT_DRAWER, loopSteps: 8 };
 function load(): Persisted {
   try {
     return { ...DEFAULTS, ...(JSON.parse(localStorage.getItem(STORE) ?? "{}") as Partial<Persisted>), };
@@ -305,6 +307,24 @@ function ShellInner() {
   );
 
   const composer = c.composer;
+  // Looping steps of the pattern on screen: from the playhead if the transport is on it, else from the marker (else the start).
+  const patternBeats = totalBeats(selectedPattern, project.beatsPerBar);
+  const patternLoop = c.loop && c.loop.patternId === selectedPatternId ? c.loop : null;
+  const loopFrom = patternLoop?.start;
+  const loopTo = patternLoop ? Math.min(patternLoop.end, patternBeats) : undefined;
+  // Stable while the loop does not change, so the memoised step lane is not re-rendered by every Shell render.
+  const loopRegion = useMemo(() => (loopFrom !== undefined && loopTo !== undefined ? { start: loopFrom, end: loopTo } : null), [loopFrom, loopTo]);
+  const onToggleStepLoop = () => {
+    if (patternLoop) return c.setLoop("pattern", null);
+    const head = c.status === "stopped" ? null : c.getPlayheadBeat();
+    const start = Math.min(patternBeats - 1, Math.floor(head ?? composer.patternMarker ?? 0));
+    c.setLoop("pattern", { patternId: selectedPatternId, start, end: start + ui.loopSteps });
+  };
+  const onLoopSteps = (n: number) => {
+    const steps = Math.max(1, Math.min(patternBeats, Math.round(n) || 1));
+    patchUi({ loopSteps: steps });
+    if (patternLoop) c.setLoop("pattern", { ...patternLoop, end: patternLoop.start + steps });
+  };
   return (
     <>
     <div className="wx" ref={setRoot} style={style} data-workspace={workspace} data-phone={narrow ? (phoneTab ?? "") : undefined}>
@@ -428,6 +448,10 @@ function ShellInner() {
                 automationRow={c.automationRow}
                 onSetNoteMode={c.handleSetNoteMode}
                 onSetNoteChord={c.handleSetNoteChord}
+                marker={composer.patternMarker}
+                onSetMarker={composer.setPatternMarker}
+                onPlayFromMarker={() => void c.handlePlayPatternFrom(selectedPatternId, composer.patternMarker ?? 0)}
+                loop={{ region: loopRegion, steps: ui.loopSteps, onToggle: onToggleStepLoop, onSteps: onLoopSteps }}
                 onSelectTrack={handleSelectTarget}
                 onAddNote={handleAddNote}
                 onRemoveNotes={onRemoveNotes}
@@ -446,6 +470,7 @@ function ShellInner() {
                 scrollMemory={composer.scrollMemory}
                 marker={composer.marker}
                 onSetMarker={composer.setMarker}
+                loopRegion={composer.loopRegion}
                 getSongBeat={c.getSongBeat}
                 playingSequenceIds={c.playingSequenceIds}
                 getSongText={c.getSongText}

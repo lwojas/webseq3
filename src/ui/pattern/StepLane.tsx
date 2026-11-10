@@ -2,7 +2,7 @@
 // derived view of the notes (stepView.ts): only occupied steps and note tails are DOM; the grid itself is a CSS background and
 // empty steps are hit-tested by arithmetic, so a 64-bar pattern costs the same as a 1-bar one. Rows are memoised on the
 // track's notes (useStableTrackNotes), so editing one track re-renders one row. The playhead is a transform-only element.
-import { memo, useCallback, useId, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
+import { memo, useCallback, useId, useLayoutEffect, useMemo, useRef, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
 import { usePlayheadAnimation } from "../../hooks/usePlayheadAnimation";
 import { useStableTrackNotes } from "../../hooks/useStableTrackNotes";
 import { effectiveSampleMode } from "../../model/chop";
@@ -15,6 +15,8 @@ import { columnOf, notesAtColumn, stepCells } from "./stepView";
 /** Width of the sticky track-header column: a CSS variable (--wx-head-w) so a phone can narrow it without JS. */
 const HEAD = "var(--wx-head-w)";
 const HANDLE_PX = 7;
+/** Scrolling to the marker leaves this much of the lane to its left. */
+const MARKER_LEAD_PX = 96;
 
 export interface StepSelection {
   trackId: TrackId;
@@ -223,6 +225,12 @@ interface LaneProps extends StepLaneHandlers {
   onClearSelection: () => void;
   /** Receives the lane's horizontal scroll so the roll can share its time axis. */
   onScrollLeft?: (left: number) => void;
+  /** The marker (a step of this pattern) or null; clicking the ruler sets it (on the same step again clears it). The lane scrolls
+   * to it when a pattern opens. */
+  marker: number | null;
+  onSetMarker: (beat: number | null) => void;
+  /** The looped steps [start, end), or null. */
+  loopRegion: { start: number; end: number } | null;
 }
 
 export const StepLane = memo(function StepLane(p: LaneProps) {
@@ -241,6 +249,17 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
     return `Track ${String(p.trackOffset + i + 1).padStart(2, "0")}, ${t.instrument || t.assetId != null ? t.name : "empty track"}, step ${column + 1}, ${what}`;
   };
   const bars = Math.ceil(beats / p.beatsPerBar);
+  const laneRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef(p.marker);
+  markerRef.current = p.marker;
+  // A pattern opens (from the Arrange view, or by stepping to another one) with the marker in view.
+  useLayoutEffect(() => {
+    const el = laneRef.current;
+    const marker = markerRef.current;
+    if (el && marker !== null) el.scrollLeft = Math.max(0, marker * p.pxPerBeat - MARKER_LEAD_PX);
+    // Only when the pattern changes -- not when the marker is set or the zoom changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.pattern.id]);
   const { onRemoveNotes, step, pattern, onSelectStep } = p;
 
   const keys = useCallback((e: ReactKeyboardEvent<HTMLDivElement>) => {
@@ -288,12 +307,25 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
   }, [bars, p.beatsPerBar, p.pxPerBeat]);
 
   return (
-    <div className="wx-lane" tabIndex={0} onKeyDown={keys} onScroll={(e) => p.onScrollLeft?.(e.currentTarget.scrollLeft)} aria-label="Step sequencer" role="group" aria-roledescription="step sequencer" aria-describedby={hintId}>
+    <div className="wx-lane" ref={laneRef} tabIndex={0} onKeyDown={keys} onScroll={(e) => p.onScrollLeft?.(e.currentTarget.scrollLeft)} aria-label="Step sequencer" role="group" aria-roledescription="step sequencer" aria-describedby={hintId}>
       <span id={hintId} className="wx-sr-only">Arrow keys move the step cursor between steps and tracks. Enter adds or removes a note. Delete removes the notes at the cursor. Press G to open the graph for the selected track.</span>
       <div className="wx-lane-inner" style={{ width: `calc(${HEAD} + ${beats * p.pxPerBeat}px)` }}>
         <div className="wx-ruler">
           <div className="wx-ruler-corner" style={{ width: HEAD }} />
-          <div className="wx-ruler-track" style={{ width: beats * p.pxPerBeat }}>{ruler}</div>
+          <div
+            className="wx-ruler-track"
+            style={{ width: beats * p.pxPerBeat }}
+            title="Click to put the marker on a step (click it again to clear). Play from marker starts there."
+            onPointerDown={(e) => {
+              if (e.button !== 0) return;
+              const beat = Math.max(0, Math.min(beats - 1, Math.floor((e.clientX - e.currentTarget.getBoundingClientRect().left) / p.pxPerBeat)));
+              p.onSetMarker(beat === p.marker ? null : beat);
+            }}
+          >
+            {p.loopRegion && <span className="wx-loop-band" style={{ left: p.loopRegion.start * p.pxPerBeat, width: (p.loopRegion.end - p.loopRegion.start) * p.pxPerBeat }} />}
+            {ruler}
+            {p.marker !== null && <span className="wx-marker-flag" style={{ left: p.marker * p.pxPerBeat }} />}
+          </div>
         </div>
         {p.tracks.map((track, i) => (
           <div key={track.id} className="wx-row-group">
@@ -323,6 +355,10 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
             {p.drawerFor === track.id && p.drawer}
           </div>
         ))}
+        <div className="wx-marker-layer" style={{ left: HEAD }}>
+          {p.loopRegion && <div className="wx-loop-region" style={{ left: p.loopRegion.start * p.pxPerBeat, width: (p.loopRegion.end - p.loopRegion.start) * p.pxPerBeat }} />}
+          {p.marker !== null && <div className="wx-marker" style={{ left: p.marker * p.pxPerBeat }} />}
+        </div>
         <div className="wx-playhead-layer" style={{ left: HEAD }}>
           <div className="wx-playhead" ref={playhead} style={{ display: "none" }} />
         </div>

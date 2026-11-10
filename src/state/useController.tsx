@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { getHostState, hasEmbeddedHost, sameMidiRoute, type AudioRuntime, type MidiRoute } from "webdsp";
 import { forgetPeaks } from "../audio/peaks";
 import type { Asset, AssetId, AutomationLane, Project, ChainEntryId, FxId, FxTarget, FxType, InstrumentKindId, NoteId, PatternId, PlaybackMode, SampleEnvelope, SampleMode, Track, TrackEventLfo, TrackId, TrackLfo, VoiceMode } from "../model/types";
@@ -22,7 +23,7 @@ import { routeForTrack } from "../audio/midiRoute";
 import { instrumentHostFor } from "../audio/instruments";
 import { useTimelineZoom } from "../hooks/useTimelineZoom";
 import { usePlayingPosition } from "../hooks/usePlayingPosition";
-import { Transport, type PlaybackStatus } from "../audio/transport";
+import { Transport, type LoopRegion, type PlaybackStatus } from "../audio/transport";
 import { createSmoothClock } from "../audio/smoothClock";
 import { Playback, type ManualPlaybackSnapshot } from "../audio/playback";
 import { ensureTrackBuses, busIdForTarget, type TrackBusMap } from "../audio/buses";
@@ -94,6 +95,10 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
   // handleSetSource, which stops the transport first.
   const [playbackSource, setPlaybackSourceState] = useState<PlaybackSource>("pattern");
   const playbackSourceRef = useRef<PlaybackSource>("pattern");
+  /** The stretch Play loops, if any (Song mode: song beats of the selected sequence; Pattern mode: steps of one pattern). The
+   * Transport reads the ref; the state is for the buttons that show it. Set through handleSetLoop. */
+  const loopRef = useRef<LoopRegion | null>(null);
+  const [loop, setLoopState] = useState<LoopRegion | null>(null);
   const playbackRef = useRef<Playback | null>(null);
 
   const [status, setStatus] = useState<PlaybackStatus>("stopped");
@@ -166,7 +171,7 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     if (!runtime) return;
     trackBusesRef.current = ensureTrackBuses(runtime, project.tracks.map((t) => t.id), trackBusesRef.current);
     if (!transportRef.current) {
-      transportRef.current = new Transport(runtime, () => projectRef.current, getBusId, ensurePlayback(runtime), createSmoothClock(() => runtime.getCurrentTime(), () => performance.now() / 1000), () => playbackSourceRef.current);
+      transportRef.current = new Transport(runtime, () => projectRef.current, getBusId, ensurePlayback(runtime), createSmoothClock(() => runtime.getCurrentTime(), () => performance.now() / 1000), () => playbackSourceRef.current, () => loopRef.current);
     }
   }, [runtime, project.tracks, getBusId, ensurePlayback]);
 
@@ -322,7 +327,7 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     if (!rt) return null;
     trackBusesRef.current = ensureTrackBuses(rt, projectRef.current.tracks.map((t) => t.id), trackBusesRef.current);
     syncBuses(rt, projectRef.current, trackBusesRef.current);
-    const t = new Transport(rt, () => projectRef.current, getBusId, ensurePlayback(rt), createSmoothClock(() => rt.getCurrentTime(), () => performance.now() / 1000), () => playbackSourceRef.current);
+    const t = new Transport(rt, () => projectRef.current, getBusId, ensurePlayback(rt), createSmoothClock(() => rt.getCurrentTime(), () => performance.now() / 1000), () => playbackSourceRef.current, () => loopRef.current);
     transportRef.current = t;
     return t;
   }, [init, getBusId, ensurePlayback]);
@@ -343,15 +348,22 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     setStatus(transportRef.current?.getStatus() ?? "stopped");
   }, []);
 
-  // Switching what Play plays stops the transport first: a position in the queue means nothing in the song.
+  const handleSetLoop = useCallback((region: LoopRegion | null) => {
+    loopRef.current = region;
+    setLoopState(region);
+    transportRef.current?.reloop(); // a running transport carries on from where it is, now inside (or outside) the loop
+  }, []);
+
+  // Switching what Play plays stops the transport first: a position in the queue means nothing in the song. A loop is of one source.
   const handleSetSource = useCallback(
     (source: PlaybackSource) => {
       if (playbackSourceRef.current === source) return;
       handleStop();
+      handleSetLoop(null);
       playbackSourceRef.current = source;
       setPlaybackSourceState(source);
     },
-    [handleStop],
+    [handleStop, handleSetLoop],
   );
 
   // Queuing/removing a pattern is an ordinary project edit (model/project.ts's
@@ -1405,6 +1417,20 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     transport?.playFromBeat(beat);
     setStatus(transport?.getStatus() ?? "stopped");
   };
+  // Loops one source: setting a region switches Play to that source first (which stops it); null clears the loop.
+  const handleLoopIn = (source: PlaybackSource, region: LoopRegion | null) => {
+    if (region) handleSetSource(source);
+    handleSetLoop(region);
+  };
+  // "Play from here" in the Pattern workspace: the pattern queue from a step of `patternId`. A pattern the queue lacks becomes the queue
+  // (as opening it from the Composer does), synchronously, so the Transport sees it.
+  const handlePlayPatternFrom = async (patternId: PatternId, beat: number) => {
+    handleSetSource("pattern");
+    flushSync(() => dispatch({ type: "ENSURE_PATTERN_QUEUED", patternId }));
+    const transport = await ensureTransport();
+    transport?.playPatternFrom(patternId, beat);
+    setStatus(transport?.getStatus() ?? "stopped");
+  };
   // Where the focused automation lane plays in the song (the same lane the grid shows) -- for the Composer to draw it over.
   const composerAutomationSpans = useMemo(
     () => {
@@ -1442,6 +1468,8 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
       if (status === "stopped") handleSetSource("pattern");
     },
     playSongFrom: (beat) => void handlePlaySongFrom(beat),
+    loop,
+    setLoop: handleLoopIn,
   });
   // "+ Composer" (pattern strip, Patterns page): copy the pattern onto the selected lane and go to the Composer. The new
   // sequence is selected by the pattern-added effect above, and the timeline scrolls it into view when that selection lands.
@@ -1573,6 +1601,9 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     getSongBeat,
     getSongText,
     gridResolution,
+    loop,
+    setLoop: handleLoopIn,
+    handlePlayPatternFrom,
     guideOpen,
     handleAddFx,
     handleAddFxLfo,

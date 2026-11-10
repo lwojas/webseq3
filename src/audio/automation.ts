@@ -90,6 +90,8 @@ interface StepWindowLike {
   endTime: number;
   /** The pattern this window plays: its own automation (Pattern.automation) replaces the owner's lanes there. */
   patternId?: PatternId;
+  /** Nothing is scheduled before this time (a looped window starts part-way into its pattern). */
+  from?: number;
 }
 
 /** Who owns an automation lane: the master or a track. Their lanes are pattern-local (they replay from the start of
@@ -269,7 +271,7 @@ export function scheduleAutomation(
     }
     const evs = laneEvents(ref.lane);
     for (const w of windows) {
-      const a = Math.max(lo, w.startTime);
+      const a = Math.max(lo, w.startTime, w.from ?? -Infinity);
       const b = Math.min(horizon, w.endTime);
       if (a >= b) continue;
       for (const e of evs) {

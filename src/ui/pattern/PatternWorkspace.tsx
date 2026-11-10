@@ -9,6 +9,7 @@ import { BANK_SIZE, type BankSummary } from "../../model/project";
 import type { ProjectScale } from "../../model/scale";
 import { totalBeats, notesForTrack, type Asset, type NoteId, type Pattern, type Track, type TrackId } from "../../model/types";
 import { Icon } from "../kit/Icon";
+import { Popover } from "../kit/Popover";
 import { PanelHeader, tabPanelProps, type TabDef } from "../kit/PanelHeader";
 import { Splitter } from "../kit/Splitter";
 import { trackColor } from "../kit/TrackHeader";
@@ -69,6 +70,12 @@ interface Props extends StepLaneHandlers {
   automationRow: AutomationRowProps | null;
   onSetNoteMode: (noteId: NoteId, mode: "note" | "chord") => void;
   onSetNoteChord: (noteId: NoteId, patch: Partial<NoteChord>) => void;
+  /** The marker (a step of this pattern) or null, set from the ruler; "play from marker" starts the pattern there (or at step 1). */
+  marker: number | null;
+  onSetMarker: (beat: number | null) => void;
+  onPlayFromMarker: () => void;
+  /** Looping a number of steps from the playhead: the looped steps (null = off), how many, and the controls. */
+  loop: { region: { start: number; end: number } | null; steps: number; onToggle: () => void; onSteps: (steps: number) => void };
 }
 
 const GRAPH_TABS: TabDef<DrawerTab>[] = [...STEP_PROPS.map((p) => ({ id: p.id as DrawerTab, label: p.label })), { id: "auto" as DrawerTab, label: "Auto", title: "Automation lane of the parameter you picked in the device area" }, { id: "chord" as DrawerTab, label: "Chord", title: "Note or chord for the selected step" }, { id: "roll", label: "Roll", title: "Piano roll: individual notes" }];
@@ -199,9 +206,28 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
           <span className="wx-zoom">{p.zoomPercent}%</span>
           <button onClick={p.onZoomIn} disabled={!p.canZoomIn} aria-label="Zoom in" title="Zoom in">+</button>
         </div>
+        <div className="wx-toolbar-group" role="group" aria-label="Play and loop">
+          <button className="wx-icon-btn" onClick={p.onPlayFromMarker} aria-label="Play from marker" title={p.marker === null ? "Play this pattern from its start (click the ruler to set a marker and start anywhere)" : `Play from the marker (step ${p.marker + 1})`}><Icon name="playFrom" /></button>
+          <button className="wx-icon-btn" onClick={p.loop.onToggle} aria-pressed={p.loop.region !== null} aria-label="Loop steps" title={p.loop.region ? "Looping: click to play on through the pattern" : `Loop ${p.loop.steps} steps from the playhead (or the marker, when stopped)`}><Icon name="loop" /></button>
+          <Popover label="Loop length" title={`Loop length: ${p.loop.steps} steps`} className="wx-icon-btn wx-loop-len" trigger={<span>{p.loop.steps}</span>}>
+            {(close) => (
+              <div className="wx-loop-len-panel">
+                <label className="wx-popover-field">
+                  <span>Steps</span>
+                  <input type="number" min={1} max={beats} value={p.loop.steps} onChange={(e) => p.loop.onSteps(Number(e.target.value))} aria-label="Loop length in steps" />
+                </label>
+                <div className="wx-loop-presets" role="group" aria-label="Loop length presets">
+                  {[...new Set([1, 2, 4, 8, p.beatsPerBar, p.beatsPerBar * 2])].filter((n) => n <= beats).sort((a, b) => a - b).map((n) => (
+                    <button key={n} className={`wx-btn ${p.loop.steps === n ? "active" : ""}`} onClick={() => { p.loop.onSteps(n); close(); }} title={n === p.beatsPerBar ? "One bar" : `${n} steps`}>{n}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </Popover>
+        </div>
         <button className="wx-icon-btn" onClick={() => onDrawer({ open: !drawer.open })} aria-pressed={drawer.open} aria-label="Graph editor" title="Graph editor under the selected track: show or hide (G)"><Icon name="graph" /></button>
         <span className="wx-spacer" />
-        <span className="wx-note hint">click adds / removes · drag moves · edge resizes · alt = free · ⋮ = several notes (select, then Roll)</span>
+        <span className="wx-note hint">click adds / removes · drag moves · edge resizes · alt = free · ⋮ = several notes (select, then Roll) · ruler = marker</span>
       </div>
       <StepLane
         tracks={p.tracks}
@@ -218,6 +244,9 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
         drawerFor={drawer.maximised ? null : (selectedTrack?.id ?? null)}
         drawer={drawerNode}
         onScrollLeft={onScrollLeft}
+        marker={p.marker}
+        onSetMarker={p.onSetMarker}
+        loopRegion={p.loop.region}
         onClearSelection={() => p.onSelectStep(null)}
         onSelectTrack={p.onSelectTrack}
         onSelectStep={p.onSelectStep}
