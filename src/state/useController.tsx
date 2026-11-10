@@ -909,6 +909,20 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     }
     dispatch({ type: "SET_TRACK_INSTRUMENT", trackId, kind });
   }, []);
+  const handleClearTrackSource = useCallback((trackId: TrackId) => {
+    const track = trackById(projectRef.current, trackId);
+    if (!track || (track.assetId == null && !track.instrument)) return;
+    const what = track.instrument ? (INSTRUMENT_DEFS[track.instrument.kind]?.label ?? "synth") : "sample";
+    if (!window.confirm(`Clear the ${what} from ${track.name}? Its notes, FX and routing are kept (Undo restores it).`)) return;
+    dispatch({ type: "CLEAR_TRACK_SOURCE", trackId });
+  }, []);
+  const handleRenameTrack = useCallback((trackId: TrackId, name: string) => dispatch({ type: "RENAME_TRACK", trackId, name }), []);
+  const handleSetTrackFxRole = useCallback((trackId: TrackId, fxTrack: boolean) => {
+    const track = trackById(projectRef.current, trackId);
+    if (!track) return;
+    if (fxTrack && (track.assetId != null || track.instrument) && !window.confirm(`Make ${track.name} an FX track? Its ${track.instrument ? "synth" : "sample"} is removed and the track is locked against new ones (Undo restores it).`)) return;
+    dispatch({ type: "SET_TRACK_FX_ROLE", trackId, fxTrack });
+  }, []);
   const handleSetInstrumentParam = useCallback(
     (trackId: TrackId, paramId: string, value: number) => dispatch({ type: "SET_INSTRUMENT_PARAM", trackId, paramId, value }),
     [],
@@ -1546,6 +1560,9 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     asset: selectedTrackAsset,
     assetUseCount: selectedTrackAssetUseCount,
     onSetInstrument: handleSetInstrument,
+    onClearSource: handleClearTrackSource,
+    onRenameTrack: handleRenameTrack,
+    onSetFxRole: handleSetTrackFxRole,
     onSetInstrumentParam: handleSetInstrumentParam,
     modulation: modulationUi,
     onAddLfo: handleAddLfo,
@@ -1654,6 +1671,9 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
     handleSetFxEnabled,
     handleSetFxLfo,
     handleSetFxParam,
+    handleClearTrackSource,
+    handleRenameTrack,
+    handleSetTrackFxRole,
     handleSetInstrument,
     handleSetNoteChord,
     handleSetNoteDuration,

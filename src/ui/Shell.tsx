@@ -459,6 +459,7 @@ function ShellInner() {
                 onResizeNote={handleResizeNote}
                 onMoveNote={handleMoveNote}
                 onMute={handleSetTrackMuted}
+                onRename={c.handleRenameTrack}
                 onSolo={handleSetTrackSoloed}
                 onNotesOff={handleSetTrackNotesOff}
                 onTrigger={handleTriggerTrack}

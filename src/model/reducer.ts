@@ -45,6 +45,9 @@ export type Action =
   | { type: "SET_TRACK_OUTPUT"; trackId: TrackId; dest: TrackId | null }
   | { type: "SET_TRACK_SEND"; trackId: TrackId; dest: TrackId | null; amount?: number }
   | { type: "SET_TRACK_SEND_AMOUNT"; trackId: TrackId; amount: number }
+  | { type: "CLEAR_TRACK_SOURCE"; trackId: TrackId }
+  | { type: "RENAME_TRACK"; trackId: TrackId; name: string }
+  | { type: "SET_TRACK_FX_ROLE"; trackId: TrackId; fxTrack: boolean }
   | { type: "SET_TRACK_INSTRUMENT"; trackId: TrackId; kind: InstrumentKindId | null }
   | { type: "SET_INSTRUMENT_PARAM"; trackId: TrackId; paramId: string; value: number }
   | { type: "SET_TRACK_EVENT_LFO"; trackId: TrackId; /** With a pattern: that pattern's own Track LFO, else the track's. */ patternId?: PatternId; patch: Partial<TrackEventLfo> }
@@ -193,6 +196,12 @@ export function projectReducer(state: Project, action: Action): Project {
       return project.setTrackSend(state, action.trackId, action.dest, action.amount);
     case "SET_TRACK_SEND_AMOUNT":
       return project.setTrackSendAmount(state, action.trackId, action.amount);
+    case "RENAME_TRACK":
+      return project.renameTrack(state, action.trackId, action.name);
+    case "SET_TRACK_FX_ROLE":
+      return pruneSourceLanes(project.setTrackFxRole(state, action.trackId, action.fxTrack), action.trackId);
+    case "CLEAR_TRACK_SOURCE":
+      return pruneSourceLanes(project.clearTrackSource(state, action.trackId), action.trackId);
     case "SET_TRACK_INSTRUMENT":
       return pruneSourceLanes(instruments.setTrackInstrument(state, action.trackId, action.kind), action.trackId);
     case "SET_INSTRUMENT_PARAM":

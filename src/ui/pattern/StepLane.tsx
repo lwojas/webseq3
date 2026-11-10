@@ -7,7 +7,7 @@ import { usePlayheadAnimation } from "../../hooks/usePlayheadAnimation";
 import { useStableTrackNotes } from "../../hooks/useStableTrackNotes";
 import { effectiveSampleMode } from "../../model/chop";
 import { isTrackOffInPattern } from "../../model/patternSettings";
-import { totalBeats, type Note, type NoteId, type Pattern, type Track, type TrackId } from "../../model/types";
+import { trackLabel, totalBeats, type Note, type NoteId, type Pattern, type Track, type TrackId } from "../../model/types";
 import { TrackHeader, trackColor } from "../kit/TrackHeader";
 import { useAnnounce } from "../kit/a11y";
 import { columnOf, notesAtColumn, stepCells } from "./stepView";
@@ -31,6 +31,7 @@ export interface StepLaneHandlers {
   onResizeNote: (noteId: NoteId, duration: number, free: boolean) => void;
   onMoveNote: (noteId: NoteId, start: number, free: boolean) => void;
   onMute: (id: TrackId, muted: boolean) => void;
+  onRename?: (id: TrackId, name: string) => void;
   onSolo: (id: TrackId, soloed: boolean) => void;
   onNotesOff: (id: TrackId, off: boolean) => void;
   onTrigger: (id: TrackId) => void;
@@ -60,7 +61,7 @@ const StepRow = memo(function StepRow(p: RowProps) {
   const { track, notes, pxPerBeat: px } = p;
   const cells = useMemo(() => stepCells(notes), [notes]);
   const drag = useRef<RowDrag | null>(null);
-  const source = track.instrument ? "synth" : track.assetId != null ? (effectiveSampleMode(track) === "chop" ? "chop" : "sample") : "empty";
+  const source = track.fxTrack ? "fx" : track.instrument ? "synth" : track.assetId != null ? (effectiveSampleMode(track) === "chop" ? "chop" : "sample") : "empty";
 
   const columnAt = (e: ReactPointerEvent) => Math.floor((e.clientX - e.currentTarget.getBoundingClientRect().left) / px);
 
@@ -168,7 +169,7 @@ const StepRow = memo(function StepRow(p: RowProps) {
   // Keyboard cursor on a step with no note (an occupied step is outlined by its pad). Visible only while the lane has keyboard focus.
   if (p.selectedColumn !== null && !cells.has(p.selectedColumn)) pads.push(<span key="cursor" className="wx-cursor" style={{ left: p.selectedColumn * px, width: px - 1 }} aria-hidden />);
 
-  const label = trackHasSourceLabel(track);
+  const label = trackLabel(track);
   return (
     <div className={`wx-row ${p.selected ? "selected" : ""} ${isTrackOffInPattern(p.pattern, track.id) ? "notes-off" : ""}`} style={{ ["--identity" as string]: trackColor(p.index) }}>
       <div className="wx-row-head" style={{ width: HEAD }}>
@@ -188,6 +189,7 @@ const StepRow = memo(function StepRow(p: RowProps) {
           onSolo={p.onSolo}
           onNotesOff={p.onNotesOff}
           onTrigger={p.onTrigger}
+          onRename={p.onRename}
         />
       </div>
       <div
@@ -205,7 +207,6 @@ const StepRow = memo(function StepRow(p: RowProps) {
   );
 });
 
-const trackHasSourceLabel = (t: Track) => (t.instrument || t.assetId != null ? t.name : "— empty —");
 
 interface LaneProps extends StepLaneHandlers {
   tracks: Track[];
@@ -246,7 +247,7 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
     if (!t) return "";
     const here = notesAtColumn(notesByTrack.get(trackId) ?? [], column);
     const what = here.length === 0 ? "empty" : here.length === 1 ? (here[0].chord ? "chord" : here[0].duration > 1 ? `note, length ${here[0].duration} steps` : "note") : `${here.length} notes`;
-    return `Track ${String(p.trackOffset + i + 1).padStart(2, "0")}, ${t.instrument || t.assetId != null ? t.name : "empty track"}, step ${column + 1}, ${what}`;
+    return `Track ${String(p.trackOffset + i + 1).padStart(2, "0")}, ${trackLabel(t)}, step ${column + 1}, ${what}`;
   };
   const bars = Math.ceil(beats / p.beatsPerBar);
   const laneRef = useRef<HTMLDivElement>(null);
@@ -348,6 +349,7 @@ export const StepLane = memo(function StepLane(p: LaneProps) {
               onResizeNote={p.onResizeNote}
               onMoveNote={p.onMoveNote}
               onMute={p.onMute}
+              onRename={p.onRename}
               onSolo={p.onSolo}
               onNotesOff={p.onNotesOff}
               onTrigger={p.onTrigger}

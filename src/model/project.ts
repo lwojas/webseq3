@@ -7,6 +7,7 @@ import type { Asset, AssetId, ChainEntry, ChainEntryId, NoteId, Pattern, Pattern
 import { normalizeChopStart, normalizeCues } from "./chop";
 import { DEFAULT_ENVELOPE, DEFAULT_PLAYBACK_MODE, DEFAULT_VOICE_MODE, SOURCE_GAIN_MAX_DB, SOURCE_GAIN_MIN_DB, leadsTo } from "./types";
 import * as notes from "./notes";
+import { INSTRUMENT_DEFS } from "./instruments";
 import { barsAllowedForPattern, removeSequencesOfPattern } from "./composer";
 
 export const MIN_BPM = 40;
@@ -177,7 +178,52 @@ export function assignAsset(project: Project, trackId: TrackId, assetId: AssetId
   if (!asset) return project;
   return {
     ...project,
-    tracks: project.tracks.map((t) => (t.id === trackId ? { ...t, assetId, instrument: null, name: asset.name } : t)),
+    tracks: project.tracks.map((t) => (t.id === trackId && !t.fxTrack ? { ...t, assetId, instrument: null, name: t.customName ? t.name : asset.name } : t)),
+  };
+}
+
+/** Empties a track's sound source (sample or synth), and the sample-only settings that went with it
+ * (its own envelope, chromatic/chop mode), without touching its notes, FX or routing. */
+export function clearTrackSource(project: Project, trackId: TrackId): Project {
+  return {
+    ...project,
+    tracks: project.tracks.map((t) => {
+      if (t.id !== trackId || (t.assetId == null && !t.instrument)) return t;
+      const { envelope: _env, sampleMode: _mode, ...rest } = t;
+      return { ...rest, assetId: null, instrument: null };
+    }),
+  };
+}
+
+/** Renames a track. A blank name goes back to following the source (its sample / synth name). */
+export function renameTrack(project: Project, trackId: TrackId, name: string): Project {
+  const trimmed = name.trim().slice(0, 40);
+  return {
+    ...project,
+    tracks: project.tracks.map((t) => {
+      if (t.id !== trackId) return t;
+      if (trimmed) return { ...t, name: trimmed, customName: true };
+      const { customName: _drop, ...rest } = t;
+      const asset = t.assetId != null ? project.assets.find((a) => a.id === t.assetId) : undefined;
+      return { ...rest, name: asset ? asset.name : t.instrument ? (INSTRUMENT_DEFS[t.instrument.kind]?.label ?? t.name) : t.name };
+    }),
+  };
+}
+
+/** Locks a track as an FX track (clearing whatever it played) or unlocks it. Locking an unnamed track
+ * calls it "FX" so it reads as a return instead of "— empty —". */
+export function setTrackFxRole(project: Project, trackId: TrackId, fxTrack: boolean): Project {
+  const cleared = fxTrack ? clearTrackSource(project, trackId) : project;
+  return {
+    ...cleared,
+    tracks: cleared.tracks.map((t) => {
+      if (t.id !== trackId || !!t.fxTrack === fxTrack) return t;
+      if (!fxTrack) {
+        const { fxTrack: _drop, ...rest } = t;
+        return rest;
+      }
+      return { ...t, fxTrack: true, name: t.customName ? t.name : "FX" };
+    }),
   };
 }
 

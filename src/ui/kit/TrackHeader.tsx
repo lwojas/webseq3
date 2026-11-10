@@ -1,6 +1,6 @@
 // The one track header (docs/rebuild/04-ui-rules.md §3): identity bar, number, name, source glyph, M / S, per-pattern notes
 // toggle, audition. `dense` is the step-lane row; `strip` is a mixer channel's head.
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { TrackId } from "../../model/types";
 import { Icon, type IconName } from "./Icon";
 
@@ -10,7 +10,7 @@ export interface TrackHeaderProps {
   id: TrackId;
   index: number;
   name: string;
-  source: "sample" | "synth" | "chop" | "empty";
+  source: "sample" | "synth" | "chop" | "empty" | "fx";
   selected: boolean;
   muted: boolean;
   soloed: boolean;
@@ -24,13 +24,16 @@ export interface TrackHeaderProps {
   onSolo: (id: TrackId, soloed: boolean) => void;
   onNotesOff?: (id: TrackId, off: boolean) => void;
   onTrigger?: (id: TrackId) => void;
+  /** Double-click the name to rename in place. */
+  onRename?: (id: TrackId, name: string) => void;
 }
 
-const GLYPH: Record<string, IconName> = { sample: "sample", synth: "keys", chop: "sample", empty: "minus" };
-const SOURCE_LABEL = { sample: "sample", synth: "synth", chop: "chop sample", empty: "no sound" } as const;
+const GLYPH: Record<string, IconName> = { fx: "minus", sample: "sample", synth: "keys", chop: "sample", empty: "minus" };
+const SOURCE_LABEL = { sample: "sample", synth: "synth", chop: "chop sample", empty: "no sound", fx: "FX track" } as const;
 
 export const TrackHeader = memo(function TrackHeader(p: TrackHeaderProps) {
   const number = String(p.index + 1).padStart(2, "0");
+  const [editing, setEditing] = useState(false);
   return (
     <div
       className={`wx-track-header ${p.density ?? "dense"} ${p.selected ? "selected" : ""}`}
@@ -41,7 +44,21 @@ export const TrackHeader = memo(function TrackHeader(p: TrackHeaderProps) {
       aria-label={`Track ${number} ${p.name}`}
     >
       <span className="wx-track-num">{number}</span>
-      <span className="wx-track-name" title={p.name}>{p.name}</span>
+      {editing && p.onRename ? (
+        <input
+          className="wx-track-rename"
+          autoFocus
+          defaultValue={p.name === "— empty —" ? "" : p.name}
+          maxLength={40}
+          aria-label="Track name"
+          onPointerDown={(e) => e.stopPropagation()}
+          onKeyDown={(e) => { if (e.key === "Enter") e.currentTarget.blur(); if (e.key === "Escape") setEditing(false); }}
+          onBlur={(e) => { if (editing) { setEditing(false); if (e.currentTarget.value !== p.name) p.onRename?.(p.id, e.currentTarget.value); } }}
+        />
+      ) : (
+        <span className="wx-track-name" title={p.onRename ? `${p.name} (double-click to rename)` : p.name} onDoubleClick={p.onRename ? () => setEditing(true) : undefined}>{p.name}</span>
+      )}
+      {p.source === "fx" && <span className="fx-track-tag">FX</span>}
       <span className="wx-track-src" role="img" title={SOURCE_LABEL[p.source]} aria-label={SOURCE_LABEL[p.source]}><Icon name={GLYPH[p.source]} size={12} /></span>
       <button className={`wx-ms ${p.muted ? "on mute" : ""}`} aria-pressed={p.muted} title="Mute" aria-label={`Mute ${p.name}`} onClick={(e) => { e.stopPropagation(); p.onMute(p.id, !p.muted); }}>M</button>
       <button className={`wx-ms ${p.soloed ? "on solo" : ""}`} aria-pressed={p.soloed} title="Solo" aria-label={`Solo ${p.name}`} onClick={(e) => { e.stopPropagation(); p.onSolo(p.id, !p.soloed); }}>S</button>

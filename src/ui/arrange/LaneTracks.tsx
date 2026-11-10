@@ -4,6 +4,7 @@
 // order, so a drum track sits in the same row from clip to clip.
 import { memo, useEffect, useMemo, useRef } from "react";
 import { sequenceBars } from "../../model/composer";
+import { trackLabel } from "../../model/types";
 import type { ComposerLane, FxTarget, Note, Pattern, Project, TrackId } from "../../model/types";
 import { trackColor } from "../kit/TrackHeader";
 
@@ -82,7 +83,7 @@ export const LaneTracks = memo(function LaneTracks({ project, lane, barPx, track
           <div className="wx-lane-tracks-head" onPointerDown={() => onSelectTarget(t.id)}>
             <span className="wx-identity" aria-hidden />
             <span className="wx-track-num">{String(index + 1).padStart(2, "0")}</span>
-            <span className="wx-track-name" title={t.name}>{t.instrument || t.assetId != null ? t.name : "— empty —"}</span>
+            <span className="wx-track-name" title={t.name}>{trackLabel(t)}</span>{t.fxTrack && <span className="fx-track-tag">FX</span>}
             <button className={`wx-ms ${t.muted ? "on mute" : ""}`} aria-pressed={t.muted} aria-label={`Mute ${t.name}`} title="Mute" onClick={(e) => { e.stopPropagation(); onSetMuted(t.id, !t.muted); }}>M</button>
             <button className={`wx-ms ${t.soloed ? "on solo" : ""}`} aria-pressed={t.soloed} aria-label={`Solo ${t.name}`} title="Solo" onClick={(e) => { e.stopPropagation(); onSetSoloed(t.id, !t.soloed); }}>S</button>
           </div>

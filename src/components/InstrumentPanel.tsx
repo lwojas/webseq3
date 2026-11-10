@@ -15,6 +15,12 @@ interface Props {
   /** How many tracks play `asset` — its envelope is shared between all of them. */
   assetUseCount: number;
   onSetInstrument: (trackId: string, kind: InstrumentKindId | null) => void;
+  /** Empties the track's sample or synth (the controller asks for confirmation). */
+  onClearSource: (trackId: string) => void;
+  /** Renames the track (blank = follow the source's name again). */
+  onRenameTrack: (trackId: string, name: string) => void;
+  /** Locks the track as an FX track (a send/return target that can't take a sample or synth) or unlocks it. */
+  onSetFxRole: (trackId: string, fxTrack: boolean) => void;
   onSetInstrumentParam: (trackId: string, paramId: string, value: number) => void;
   /** Engine-reported modulation options for the selected synth, or null before the engine exists
    * (the modulation slot then stays hidden). */
@@ -63,6 +69,25 @@ interface SliderProps {
 function formatValue(value: number, unit?: string): string {
   if (unit?.trim() === "dB") return value.toFixed(1);  // gain reads "0.0 dB"
   return Math.abs(value) < 10 ? value.toFixed(2) : String(Math.round(value));
+}
+
+/** The track's name, editable in place: Enter / blur commits, Escape reverts. */
+function TrackNameField({ track, onRename }: { track: Track; onRename: (name: string) => void }) {
+  return (
+    <input
+      key={`${track.id}:${track.name}`}
+      className="track-name-input"
+      defaultValue={track.name}
+      maxLength={40}
+      aria-label="Track name"
+      title="Rename this track (clear the field to follow the sample / synth name again)"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") { e.currentTarget.value = track.name; e.currentTarget.blur(); }
+      }}
+      onBlur={(e) => e.currentTarget.value !== track.name && onRename(e.currentTarget.value)}
+    />
+  );
 }
 
 function Slider({ label, min, max, step, value, unit, onChange, badge, onAutomate }: SliderProps) {
@@ -213,6 +238,9 @@ export function InstrumentPanel({
   asset,
   assetUseCount,
   onSetInstrument,
+  onClearSource,
+  onRenameTrack,
+  onSetFxRole,
   onSetInstrumentParam,
   modulation,
   onAddLfo,
@@ -247,10 +275,24 @@ export function InstrumentPanel({
   const setEnvelope = (patch: Partial<SampleEnvelope>) => (ownEnvelope && asset ? onSetTrackEnvelope(track.id, patch) : asset && onSetEnvelope(asset.id, patch));
   const badges = modulationBadges(automation?.lanes ?? [], synth?.lfos ?? []);
 
+  if (track.fxTrack) {
+    return (
+      <div className="fx-panel instrument-panel fx-track">
+        <div className="fx-panel-head">
+          <div className="fx-panel-title"><TrackNameField track={track} onRename={(n) => onRenameTrack(track.id, n)} /> <span className="fx-track-tag">FX TRACK</span></div>
+          <button className="track-copy-btn" onClick={() => onSetFxRole(track.id, false)} title="Unlock this track so it can take a sample or synth again">Unlock</button>
+        </div>
+        <div className="fx-panel-empty">
+          Locked as an FX track: it has no sample or synth. Add effects in the FX tab, then point other tracks' FX send (or Output) at it from their FX tab.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fx-panel instrument-panel">
       <div className="fx-panel-head">
-        <div className="fx-panel-title">{track.name} — INSTRUMENT</div>
+        <div className="fx-panel-title"><TrackNameField track={track} onRename={(n) => onRenameTrack(track.id, n)} /> — INSTRUMENT</div>
         <div className="track-mode-group">
           <span className="track-mode-label">Source</span>
           <div className="track-mode-toggle">
@@ -266,6 +308,17 @@ export function InstrumentPanel({
               Synth
             </button>
           </div>
+          <button
+            className="track-copy-btn danger"
+            disabled={!synth && !asset}
+            onClick={() => onClearSource(track.id)}
+            title={synth ? "Remove the synth from this track" : "Remove the sample from this track"}
+          >
+            Clear
+          </button>
+          <button className="track-copy-btn" onClick={() => onSetFxRole(track.id, true)} title="Lock this track as an FX track: a send / return target that can't take a sample or synth">
+            Make FX track
+          </button>
         </div>
       </div>
 

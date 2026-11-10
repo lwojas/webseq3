@@ -42,7 +42,7 @@ export function applyRecipe(project: Project, recipe: Recipe, options: ApplyOpti
   const used = new Set(Object.values(pattern.notes).map((n) => n.trackId));
   const startIndex = Math.max(0, project.tracks.findIndex((t) => t.id === options.trackId));
   const order = [...project.tracks.slice(startIndex), ...project.tracks.slice(0, startIndex)];
-  const free = order.filter((t) => !used.has(t.id));
+  const free = order.filter((t) => !used.has(t.id) && !t.fxTrack);
   if (free.length < recipe.tracks.length) {
     return { ok: false, reason: `This recipe needs ${recipe.tracks.length} empty track${recipe.tracks.length === 1 ? "" : "s"} in this sequence, and only ${free.length} ${free.length === 1 ? "is" : "are"} free.` };
   }

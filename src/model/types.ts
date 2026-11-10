@@ -95,6 +95,13 @@ export interface Track {
    * tracks may use the same asset differently. Optional like playbackMode (old projects lack it);
    * read through effectiveSampleMode. */
   sampleMode?: SampleMode;
+  /** The user typed this name (Track.name is otherwise the source's name, rewritten whenever a
+   * sample or synth is assigned). While set, assigning a source keeps the name. */
+  customName?: boolean;
+  /** An FX track: a return meant to be the target of other tracks' sends/outputs, not a sound
+   * source. Locked against samples and synths (assignAsset / setTrackInstrument / pastes are
+   * no-ops on it) so one can't be dropped on it by accident; unlock to use it as a normal track. */
+  fxTrack?: boolean;
   /** Stereo position, -1 (left) .. 0 (centre) .. +1 (right), pushed to the engine as the track
    * bus's NodeParam.BusPan (see audio/mixer.ts). Optional for the same missing-field-defaults-
    * safely reason as playbackMode — read through effectivePan. */
@@ -676,6 +683,12 @@ export function effectivePan(track: Pick<Track, "pan">): number {
 /** True when the track has something to play: a sample or a synth instrument. */
 export function trackHasSource(track: Pick<Track, "assetId" | "instrument">): boolean {
   return track.assetId != null || track.instrument != null;
+}
+
+/** What a track is called in lists: its name once it has a source, was renamed, or is an FX
+ * track; otherwise the placeholder. */
+export function trackLabel(track: Pick<Track, "assetId" | "instrument" | "name" | "customName" | "fxTrack">): string {
+  return trackHasSource(track) || track.customName || track.fxTrack ? track.name : "— empty —";
 }
 
 /** `track.chokeGroup` as a positive integer, or null for none. Anything else a hand-edited or

@@ -92,6 +92,7 @@ export function copyInstrument(track: Track): InstrumentClip {
 export function pasteInstrument(project: Project, trackId: TrackId, clip: InstrumentClip): Project {
   const asset = clip.assetId != null ? project.assets.find((a) => a.id === clip.assetId) : undefined;
   return updateTrack(project, trackId, (t) => {
+    if (t.fxTrack) return t;
     const instrument = clip.instrument ? cloneInstrument(clip.instrument) : null;
     if (instrument && t.instrument?.kind === instrument.kind && t.instrument.lfos) {
       instrument.lfos = t.instrument.lfos.map((l) => ({ ...l }));
@@ -100,7 +101,7 @@ export function pasteInstrument(project: Project, trackId: TrackId, clip: Instru
       ...t,
       assetId: asset ? asset.id : null,
       instrument,
-      name: asset ? asset.name : instrument ? (INSTRUMENT_DEFS[instrument.kind]?.label ?? t.name) : t.name,
+      name: t.customName ? t.name : asset ? asset.name : instrument ? (INSTRUMENT_DEFS[instrument.kind]?.label ?? t.name) : t.name,
       playbackMode: clip.playbackMode,
       voiceMode: clip.voiceMode,
       chokeGroup: clip.chokeGroup,

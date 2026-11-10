@@ -4138,3 +4138,31 @@ option.out-of-scale {
   color: var(--amber);
   font-weight: 600;
 }
+
+/* Track names: editable in the Instrument tab's title, and in place in the step lane (double-click). */
+.track-name-input,
+.wx-track-rename {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
+  font: inherit;
+  padding: 1px 4px;
+  min-width: 0;
+}
+.track-name-input { width: 14ch; }
+.wx-track-rename { flex: 1; width: 0; font-size: 11px; }
+
+/* FX tracks: a return meant to be sent to, locked against samples and synths. One amber tag and
+   tint everywhere a track is listed, so they read as a different kind of track. */
+.fx-track-tag {
+  flex-shrink: 0;
+  color: var(--amber);
+  border: 1px solid var(--amber);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  padding: 0 3px;
+  margin: 0 3px;
+}
+.fx-panel.fx-track { border-top: 2px solid var(--amber); }
+.mixer-strip.fx { border-top: 2px solid var(--amber); }
+.wx-track-header:has(.fx-track-tag) { box-shadow: inset 2px 0 0 var(--amber); }

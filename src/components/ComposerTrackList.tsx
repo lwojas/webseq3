@@ -1,7 +1,7 @@
 import { memo, useMemo } from "react";
 import { isTrackOffInPattern } from "../model/patternSettings";
 import type { FxTarget, Pattern, Track, TrackId } from "../model/types";
-import { trackHasSource } from "../model/types";
+import { trackHasSource, trackLabel } from "../model/types";
 
 export interface ComposerTrackListProps {
   tracks: Track[];
@@ -91,7 +91,8 @@ const ComposerTrackRow = memo(function ComposerTrackRow({ track, index, selected
   return (
     <div className={`composer-track ${selected ? "selected" : ""} ${state.kind === "off" ? "disabled" : ""}`} onClick={() => onSelectTarget(track.id)}>
       <span className="composer-track-num">{String(index + 1).padStart(2, "0")}</span>
-      <span className={`composer-track-name ${trackHasSource(track) ? "" : "unassigned"}`}>{trackHasSource(track) ? track.name : "— empty —"}</span>
+      <span className={`composer-track-name ${trackHasSource(track) || track.customName || track.fxTrack ? "" : "unassigned"}`}>{trackLabel(track)}</span>
+      {track.fxTrack && <span className="fx-track-tag">FX</span>}
       {trackHasSource(track) && <span className="track-source-tag">{track.instrument ? "SYN" : "SMP"}</span>}
       {track.fx.length > 0 && <span className="track-fx-badge">{track.fx.length}FX</span>}
       {hasPattern && (

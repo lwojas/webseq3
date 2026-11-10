@@ -52,13 +52,14 @@ export function MixerPanel({ tracks, trackNumberOffset, onSetVolume, onSetMuted,
   return (
     <div className="mixer-panel" ref={rootRef}>
       {tracks.map((track, i) => (
-        <div key={track.id} className={`mixer-strip ${track.muted ? "muted" : ""}`}>
+        <div key={track.id} className={`mixer-strip ${track.muted ? "muted" : ""} ${track.fxTrack ? "fx" : ""}`}>
           <span className="mixer-strip-num">{String(trackNumberOffset + i + 1).padStart(2, "0")}</span>
           <span
-            className={`mixer-strip-name ${trackHasSource(track) ? "" : "unassigned"}`}
-            title={trackHasSource(track) ? track.name : undefined}
+            className={`mixer-strip-name ${trackHasSource(track) || track.customName || track.fxTrack ? "" : "unassigned"}`}
+            title={track.name}
           >
-            {trackHasSource(track) ? track.name : "—"}
+            {track.fxTrack && <span className="fx-track-tag">FX</span>}
+            {trackHasSource(track) || track.customName || track.fxTrack ? track.name : "—"}
           </span>
           <span className="mixer-clip" data-clip-track={track.id} title="Lights red when this track clips (peaks at 0 dBFS or above)" />
           <span className="mixer-strip-value">{Math.round(track.volume * 100)}%</span>

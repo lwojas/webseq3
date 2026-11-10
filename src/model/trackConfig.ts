@@ -138,7 +138,7 @@ export function pasteTrackConfig(project: Project, trackId: TrackId, config: Cop
   return {
     ...project,
     tracks: project.tracks.map((t) =>
-      t.id === trackId
+      t.id === trackId && !t.fxTrack
         ? {
             ...t,
             assetId,
@@ -146,7 +146,7 @@ export function pasteTrackConfig(project: Project, trackId: TrackId, config: Cop
             pan: config.pan,
             eventLfo: config.eventLfo ? { ...config.eventLfo } : undefined,
             arp: config.arp ? cloneArp(config.arp) : undefined,
-            name: asset ? asset.name : instrument ? (INSTRUMENT_DEFS[instrument.kind]?.label ?? t.name) : t.name,
+            name: t.customName ? t.name : asset ? asset.name : instrument ? (INSTRUMENT_DEFS[instrument.kind]?.label ?? t.name) : t.name,
             fx,
             automation,
             playbackMode: config.playbackMode,

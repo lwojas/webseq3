@@ -1,6 +1,6 @@
 import { FX_DEFS } from "../model/fx";
 import type { FxId, FxTarget, FxType, Track, TrackId, TrackLfo } from "../model/types";
-import { resolvedOutput, resolvedSend } from "../model/types";
+import { resolvedOutput, resolvedSend, trackLabel } from "../model/types";
 import { canRouteTo } from "../model/project";
 import { FxChainStrip } from "./FxChainStrip";
 import { ModulePanel } from "./ModulePanel";
@@ -117,6 +117,18 @@ function RoutingRow({ track, tracks, onSetOutput, onSetSend }: { track: Track; t
   const project = { tracks } as import("../model/types").Project;
   const current = resolvedOutput(project, track);
   const send = resolvedSend(project, track);
+  /** Valid destinations, FX tracks first (they exist to be sent to). */
+  const trackOptions = (valid: (t: Track) => boolean) => {
+    const option = (t: Track) => (
+      <option key={t.id} value={t.id}>
+        {String(tracks.indexOf(t) + 1).padStart(2, "0")} · {trackLabel(t)}
+      </option>
+    );
+    const fxTracks = tracks.filter((t) => t.fxTrack && valid(t));
+    const others = tracks.filter((t) => !t.fxTrack && valid(t));
+    if (fxTracks.length === 0) return others.map(option);
+    return [<optgroup key="fx" label="FX tracks">{fxTracks.map(option)}</optgroup>, <optgroup key="other" label="Other tracks">{others.map(option)}</optgroup>];
+  };
   const incoming = tracks.filter((t) => t.id !== track.id && (resolvedOutput(project, t) === track.id || resolvedSend(project, t)?.to === track.id)).length;
   return (
     <div className="fx-panel-head-controls">
@@ -129,13 +141,7 @@ function RoutingRow({ track, tracks, onSetOutput, onSetSend }: { track: Track; t
           aria-label="Send this track's audio to"
         >
           <option value="master">Master</option>
-          {tracks.map((t, i) =>
-            t.id === current || canRouteTo(project, track.id, t.id) ? (
-              <option key={t.id} value={t.id}>
-                {String(i + 1).padStart(2, "0")} · {t.name}
-              </option>
-            ) : null,
-          )}
+          {trackOptions((t) => t.id === current || canRouteTo(project, track.id, t.id))}
         </select>
       </label>
       <label className="track-mode-group">
@@ -147,13 +153,7 @@ function RoutingRow({ track, tracks, onSetOutput, onSetSend }: { track: Track; t
           aria-label="Send a copy of this track's audio (post-fader) to"
         >
           <option value="">None</option>
-          {tracks.map((t, i) =>
-            t.id === send?.to || canRouteTo(project, track.id, t.id) ? (
-              <option key={t.id} value={t.id}>
-                {String(i + 1).padStart(2, "0")} · {t.name}
-              </option>
-            ) : null,
-          )}
+          {trackOptions((t) => t.id === send?.to || canRouteTo(project, track.id, t.id))}
         </select>
       </label>
       {send && (

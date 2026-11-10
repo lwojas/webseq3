@@ -255,6 +255,7 @@ export const PatternWorkspace = memo(function PatternWorkspace(p: Props) {
         onResizeNote={p.onResizeNote}
         onMoveNote={p.onMoveNote}
         onMute={p.onMute}
+        onRename={p.onRename}
         onSolo={p.onSolo}
         onNotesOff={p.onNotesOff}
         onTrigger={p.onTrigger}

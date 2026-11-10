@@ -655,9 +655,10 @@ function updateTrack(project: Project, trackId: TrackId, update: (t: Track) => T
  * already in place is a no-op, so a stray click never resets tweaked params. */
 export function setTrackInstrument(project: Project, trackId: TrackId, kind: InstrumentKindId | null): Project {
   return updateTrack(project, trackId, (t) => {
+    if (t.fxTrack) return t;
     if (kind === null) return t.instrument ? { ...t, instrument: null } : t;
     if (t.instrument?.kind === kind) return t;
-    return { ...t, instrument: createInstrument(kind), assetId: null, name: INSTRUMENT_DEFS[kind].label };
+    return { ...t, instrument: createInstrument(kind), assetId: null, name: t.customName ? t.name : INSTRUMENT_DEFS[kind].label };
   });
 }
 

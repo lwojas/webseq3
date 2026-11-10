@@ -8,7 +8,7 @@ import { arpOf, type ArpVelocity, type TrackArp } from "../model/arp";
 import { chordFitsScale, chordMidis, chordRootOptions, chordType, chordTypeId, chordTypePatch, maxInversion, midiNoteName, CHORD_SHAPES, CHORD_TYPES, type ChordVoicing, type NoteChord } from "../model/chord";
 import { degreeOfIndex } from "../model/scaleDegrees";
 import { getScaleDegree, isChromatic, isOffsetInScale, referenceMidi, type ProjectScale } from "../model/scale";
-import { RATCHET_VALUES, notesForTrack, ratchetOf, totalBeats, trackHasSource } from "../model/types";
+import { RATCHET_VALUES, notesForTrack, ratchetOf, totalBeats, trackLabel } from "../model/types";
 import { pitchOptions } from "../model/pitchOptions";
 import { effectiveSampleMode, sliceCount } from "../model/chop";
 import { rootMidiNote, supportsTie } from "../model/instruments";
@@ -398,7 +398,7 @@ export const TrackEditor = memo(function TrackEditor({
   return (
     <div className="track-editor">
       <div className="fx-panel-title">
-        {trackHasSource(track) ? track.name : "— empty —"} — TRACK EDITOR
+        {trackLabel(track)} — TRACK EDITOR
       </div>
       <div className="track-lfo">
         <div className="track-lfo-head">
