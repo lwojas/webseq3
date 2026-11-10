@@ -579,12 +579,24 @@ export function setChain(project: Project, patternChain: ChainEntry[]): Project 
  * same numeric space as webdsp's SampleId (see types.ts's AssetId doc comment) and a fresh
  * runtime almost never reproduces the same ids a previous session had. Ids missing from
  * `idMap` are left as they were — a no-op for an asset that failed to reload rather than a
- * crash. */
-export function remapAssetIds(project: Project, idMap: Map<AssetId, AssetId>): Project {
+ * crash.
+ *
+ * `loaded` (keyed by the *old* id) carries what the engine reported when it re-decoded each asset.
+ * The engine decodes at its current output rate, which can differ from the rate the project was
+ * saved at, so the stored duration/sampleRate/channels are refreshed from it; chop regions are
+ * derived from them (model/chop.ts assetLengthFrames) and would otherwise land in the wrong place. */
+export function remapAssetIds(
+  project: Project,
+  idMap: Map<AssetId, AssetId>,
+  loaded?: Map<AssetId, Pick<Asset, "duration" | "sampleRate" | "channels">>,
+): Project {
   const remap = (id: AssetId | null): AssetId | null => (id != null && idMap.has(id) ? idMap.get(id)! : id);
   return {
     ...project,
-    assets: project.assets.map((a) => ({ ...a, id: remap(a.id) ?? a.id })),
+    assets: project.assets.map((a) => {
+      const meta = loaded?.get(a.id);
+      return { ...a, ...(meta ? { duration: meta.duration, sampleRate: meta.sampleRate, channels: meta.channels } : {}), id: remap(a.id) ?? a.id };
+    }),
     tracks: project.tracks.map((t) => ({ ...t, assetId: remap(t.assetId) })),
   };
 }

@@ -353,6 +353,19 @@ describe("project model", () => {
     expect(project.assets.map((a) => a.id).sort()).toEqual([107, 109]);
   });
 
+  it("remapAssetIds refreshes duration/sampleRate from what the engine re-decoded (rate changed since save)", () => {
+    let project = addAsset(createInitialProject(), makeAsset({ id: 7, name: "a.wav", duration: 2, sampleRate: 44100 }));
+    project = addAsset(project, makeAsset({ id: 9, name: "b.wav", duration: 1, sampleRate: 44100 }));
+    const remapped = remapAssetIds(
+      project,
+      new Map([[7, 107]]),
+      new Map([[7, { duration: 2.0001, sampleRate: 48000, channels: 1 }]]),
+    );
+    const a = remapped.assets.find((x) => x.id === 107)!;
+    expect(a).toMatchObject({ duration: 2.0001, sampleRate: 48000, channels: 1 });
+    expect(remapped.assets.find((x) => x.id === 9)).toMatchObject({ duration: 1, sampleRate: 44100 });
+  });
+
   it("a project's assets and track references survive a persistence-shaped round trip", () => {
     // Mirrors what saveProject/loadProject actually persist: the plain Project JSON (assets +
     // track references) is what's expected to serialize losslessly; the binary bytes

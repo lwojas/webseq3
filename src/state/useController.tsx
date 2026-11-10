@@ -1151,15 +1151,17 @@ export function useController({ newUi = false }: { newUi?: boolean } = {}) {
       transportRef.current?.stop();
       releaseEngineSamples(runtimeInstance);
       const idMap = new Map<AssetId, AssetId>();
+      const loaded = new Map<AssetId, Pick<Asset, "duration" | "sampleRate" | "channels">>();
       assetDataRef.current = new Map();
       for (const asset of source.assets) {
         const data = assetData.get(asset.id);
         if (!data) continue;
         const meta = await runtimeInstance.loadSample(data.slice(0), { name: asset.name });
         idMap.set(asset.id, meta.id);
+        loaded.set(asset.id, { duration: meta.duration, sampleRate: meta.sampleRate, channels: meta.channels });
         assetDataRef.current.set(meta.id, data);
       }
-      const remapped = withMissingTracks(remapAssetIds(source, idMap));
+      const remapped = withMissingTracks(remapAssetIds(source, idMap, loaded));
       // Deliberately NOT resetting trackBusesRef here: webdsp's createBus() hands buses out
       // from a one-way counter (MAX_TRACK_BUSES = 32) with no release call, so wiping this map
       // on every load would force a brand-new set of buses per load and exhaust the pool after
