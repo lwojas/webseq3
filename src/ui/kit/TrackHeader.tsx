@@ -6,6 +6,9 @@ import { Icon, type IconName } from "./Icon";
 
 export const trackColor = (index: number): string => `hsl(${(index * 47) % 360} 52% 56%)`;
 
+/** A pointerdown that starts on a button (M / S / notes / play) is that button's, not a request to select the track. */
+export const startsOnButton = (target: EventTarget | null): boolean => !!(target as Element | null)?.closest?.("button");
+
 export interface TrackHeaderProps {
   id: TrackId;
   index: number;
@@ -38,7 +41,7 @@ export const TrackHeader = memo(function TrackHeader(p: TrackHeaderProps) {
     <div
       className={`wx-track-header ${p.density ?? "dense"} ${p.selected ? "selected" : ""}`}
       style={{ ["--identity" as string]: trackColor(p.index) }}
-      onPointerDown={() => p.onSelect(p.id)}
+      onPointerDown={(e) => { if (!startsOnButton(e.target)) p.onSelect(p.id); }}
       role="group"
       aria-current={p.selected ? "true" : undefined}
       aria-label={`Track ${number} ${p.name}`}

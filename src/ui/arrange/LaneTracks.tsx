@@ -6,7 +6,7 @@ import { memo, useEffect, useMemo, useRef } from "react";
 import { sequenceBars } from "../../model/composer";
 import { trackLabel } from "../../model/types";
 import type { ComposerLane, FxTarget, Note, Pattern, Project, TrackId } from "../../model/types";
-import { trackColor } from "../kit/TrackHeader";
+import { startsOnButton, trackColor } from "../kit/TrackHeader";
 
 const ROW_H = 22;
 
@@ -80,7 +80,7 @@ export const LaneTracks = memo(function LaneTracks({ project, lane, barPx, track
     <div className="wx-lane-tracks">
       {rows.tracks.map(({ t, index }) => (
         <div key={t.id} className={`wx-lane-trackrow ${selectedTarget === t.id ? "selected" : ""}`} style={{ ["--identity" as string]: trackColor(index) }}>
-          <div className="wx-lane-tracks-head" onPointerDown={() => onSelectTarget(t.id)}>
+          <div className="wx-lane-tracks-head" onPointerDown={(e) => { if (!startsOnButton(e.target)) onSelectTarget(t.id); }}>
             <span className="wx-identity" aria-hidden />
             <span className="wx-track-num">{String(index + 1).padStart(2, "0")}</span>
             <span className="wx-track-name" title={t.name}>{trackLabel(t)}</span>{t.fxTrack && <span className="fx-track-tag">FX</span>}
