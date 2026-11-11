@@ -3071,7 +3071,7 @@ select {
   letter-spacing: 0.05em;
 }
 
-.mod-slot .module-param select {
+.module-param select {
   min-width: 96px;
   background: var(--panel-alt);
   border: 1px solid var(--border-strong);
@@ -4084,18 +4084,45 @@ option.out-of-scale {
 .comp-presets {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 2px;
   flex: 1 1 260px;
 }
 
-.comp-presets button,
-.comp-ab {
-  padding: 4px 10px;
+/* Preset buttons and the A/B toggle reuse the FX controls' look (.enum-toggle / .fx-chip). */
+.comp-presets button {
+  background: var(--panel);
+  border: 1px solid var(--border-strong);
+  color: var(--text-dim);
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.comp-presets button:hover {
+  color: var(--text);
 }
 
 .comp-presets button.active {
+  background: var(--accent-dim);
   border-color: var(--accent);
-  color: var(--accent);
+  color: #eafffa;
+}
+
+.comp-ab {
+  background: var(--panel-alt);
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  color: var(--text);
+  padding: 5px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.comp-ab:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .comp-ab.dry {
