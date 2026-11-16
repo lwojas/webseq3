@@ -221,7 +221,8 @@
 /* drawer under the selected track */
 .wx-row-group { display: block; }
 .wx-drawer { border-bottom: 1px solid var(--accent-dim); background: var(--panel); position: relative; }
-.wx-drawer .wx-panel-header { width: 100%; position: sticky; left: 0; background: color-mix(in srgb, var(--identity) 20%, var(--panel)); z-index: 4; }
+/* The header is as wide as the visible lane (viewport minus the 40px rail, the library and its splitter), not the drawer, so its sticky left keeps the tabs on screen while the timeline scrolls. */
+.wx-drawer .wx-panel-header { width: calc(100vw - var(--wx-library-w) - 42px); max-width: 100%; box-sizing: border-box; position: sticky; left: 0; background: color-mix(in srgb, var(--identity) 20%, var(--panel)); z-index: 4; }
 .wx-drawer.maximised { position: sticky; left: 0; z-index: 4; }
 .wx-drawer-body { position: relative; }
 .wx-drawer-body.roll { display: flex; flex-direction: column; min-width: 0; position: sticky; left: 0; z-index: 4; width: calc(100vw - var(--wx-library-w) - 2px); max-width: 100%; }
@@ -389,7 +390,7 @@
   .wx:not([data-phone="library"]) .wx-sidebar { display: none; }
   .wx[data-phone="library"] .wx-sidebar { flex: 1; width: 100%; border-right: 0; }
   .wx[data-phone="library"] .wx-side-panel { width: auto; flex: 1; }
-  .wx-drawer-body.roll { width: 100vw; }
+  .wx-drawer-body.roll, .wx-drawer .wx-panel-header { width: 100vw; }
   .wx-menu { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .wx-menu-nav { flex-direction: row; }
 }
