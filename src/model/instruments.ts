@@ -590,6 +590,40 @@ export const INSTRUMENT_DEFS: Record<InstrumentKindId, InstrumentDef> = {
       { id: "width", label: "Width", min: 0, max: 1, step: 0.01, default: 0.6 },
     ],
   },
+  // Sub Bass (webdsp docs/subbass-instrument.md): a harmonic sine / sub-bass voice. Shape runs the oscillator from a
+  // pure sine to a saw-like stack (Profile picks where it goes), then Drive, an LP24/LP12 filter and two envelopes
+  // (plus a pitch envelope). Sustained. Unlike the other synths its base frequency is `root`; `tune` is a cents detune.
+  subbass: {
+    kind: "subbass",
+    label: "Sub Bass",
+    category: "bass",
+    sustained: true,
+    params: [
+      { id: "shape", label: "Shape", min: 0, max: 1, step: 0.01, default: 0 },
+      { id: "profile", label: "Profile", min: 0, max: 4, step: 1, default: 0, options: stepOptions(["Classic", "Warm", "Hollow", "Bright", "Saw"]) },
+      { id: "octave", label: "Octave", min: -2, max: 1, step: 1, default: 0, options: [-2, -1, 0, 1].map((value) => ({ value, label: value > 0 ? `+${value}` : `${value}` })) },
+      { id: "tune", label: "Tune", min: -100, max: 100, step: 1, unit: "ct", default: 0 },
+      { id: "level", label: "Level", min: 0, max: 1, step: 0.01, default: 0.85 },
+      { id: "phase", label: "Phase", min: 0, max: 1, step: 0.01, default: 0 },
+      { id: "phasereset", label: "Phase Reset", min: 0, max: 1, step: 1, default: 1, options: stepOptions(["Free", "Reset"]) },
+      { id: "drive", label: "Drive", min: 0, max: 1, step: 0.01, default: 0 },
+      { id: "filtertype", label: "Filter", min: 0, max: 1, step: 1, default: 0, options: stepOptions(["LP 24", "LP 12"]) },
+      { id: "cutoff", label: "Cutoff", min: 30, max: 16000, step: 1, unit: "Hz", default: 12000 },
+      { id: "resonance", label: "Resonance", min: 0, max: 1, step: 0.01, default: 0 },
+      { id: "fattack", label: "Filter Attack", min: 0.001, max: 2, step: 0.001, unit: "s", default: 0.002 },
+      { id: "fdecay", label: "Filter Decay", min: 0.01, max: 4, step: 0.01, unit: "s", default: 0.3 },
+      { id: "fsustain", label: "Filter Sustain", min: 0, max: 1, step: 0.01, default: 0.3 },
+      { id: "frelease", label: "Filter Release", min: 0.01, max: 4, step: 0.01, unit: "s", default: 0.2 },
+      { id: "famount", label: "Filter Env", min: -5, max: 5, step: 0.01, unit: "oct", default: 0 },
+      { id: "pitchamount", label: "Pitch Env", min: -24, max: 24, step: 0.1, unit: "st", default: 0 },
+      { id: "pitchdecay", label: "Pitch Decay", min: 0.005, max: 0.5, step: 0.005, unit: "s", default: 0.08 },
+      { id: "attack", label: "Attack", min: 0.001, max: 2, step: 0.001, unit: "s", default: 0.003 },
+      { id: "decay", label: "Decay", min: 0.01, max: 4, step: 0.01, unit: "s", default: 0.3 },
+      { id: "sustain", label: "Sustain", min: 0, max: 1, step: 0.01, default: 1 },
+      { id: "release", label: "Release", min: 0.01, max: 4, step: 0.01, unit: "s", default: 0.25 },
+      { id: "root", label: "Root", min: 20, max: 880, step: 0.5, unit: "Hz", default: 55 },
+    ],
+  },
 };
 
 // Source gain: webdsp gives every instrument kind a shared "gain" control (dB, default 0 = unity)
@@ -638,9 +672,10 @@ export function instrumentDefFor(track: Pick<Track, "instrument">): InstrumentDe
 export function rootMidiNote(track: Pick<Track, "instrument">): number | null {
   const inst = track.instrument;
   const def = inst ? INSTRUMENT_DEFS[inst.kind] : undefined;
-  const tune = def?.params.find((p) => p.id === "tune");
+  // Sub Bass's base frequency is `root` (its `tune` is cents), shifted by its `octave`; every other synth uses `tune`.
+  const tune = def?.params.find((p) => p.id === "root") ?? def?.params.find((p) => p.id === "tune");
   if (!inst || !tune || tune.unit !== "Hz") return null;
-  const hz = inst.params.tune ?? tune.default;
+  const hz = (inst.params[tune.id] ?? tune.default) * 2 ** (tune.id === "root" ? (inst.params.octave ?? 0) : 0);
   return hz > 0 ? 69 + 12 * Math.log2(hz / 440) : null;
 }
 
